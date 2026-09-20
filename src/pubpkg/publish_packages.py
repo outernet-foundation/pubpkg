@@ -19,7 +19,7 @@ DEFAULT_CONFIG_PATH = Path("build/publish-config.json")
 
 
 class Settings(BaseSettings):
-    github_workspace: str
+    github_workspace: str = ""
     github_step_summary: str | None = None
     github_output: str | None = None
     nuget_api_key: str = ""
@@ -40,12 +40,6 @@ def main(
     publish_config = load_config(config_path)
     ledger = GitLedger()
 
-    with ci_step("Setup"):
-        configure_git(settings.github_workspace)
-        free_disk_space()
-        install_dotnet("8.0")
-        install_node("24", "https://registry.npmjs.org")
-
     with ci_step("Compute publish plan"):
         plans = compute_plan(publish_config.packages, ledger)
 
@@ -60,6 +54,12 @@ def main(
         if dry_run:
             print("Dry run — skipping publish")
             return
+
+    with ci_step("Setup"):
+        configure_git(settings.github_workspace)
+        free_disk_space()
+        install_dotnet("8.0")
+        install_node("24", "https://registry.npmjs.org")
 
     feeds = build_feeds(settings.nuget_api_key)
     for package in publish_config.packages:
