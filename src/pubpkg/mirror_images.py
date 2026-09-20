@@ -17,8 +17,8 @@ CRANE_VERSION = "v0.22.1"
 
 
 @app.command()
-def main(config_path: Annotated[Path, typer.Option(help="Publish configuration JSON")]) -> None:
-    publish_config = load_config(config_path)
+def main(config: Annotated[Path, typer.Option(help="Publish configuration JSON")]) -> None:
+    publish_config = load_config(config)
     mirror_prefix = publish_config.mirror_prefix
     targets = {
         occurrence.reference: occurrence.reference[len(mirror_prefix) + 1 :]

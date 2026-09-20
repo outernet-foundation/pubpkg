@@ -1,7 +1,16 @@
 from pathlib import Path
 
 from pubpkg import PackageConfig, compute_plan, next_version, render_summary, resolved_dependency_versions
+from pubpkg.ledger import is_stable_version
 from pubpkg.plan import TagLedger
+
+
+def test_is_stable_version_rejects_prerelease_suffixes():
+    assert is_stable_version("1.0.5")
+    assert is_stable_version("0.1.0")
+    assert not is_stable_version("1.0.6-preview")
+    assert not is_stable_version("0.1.0-dev.1234")
+    assert not is_stable_version("v1.0.5")
 
 
 class FakeLedger:

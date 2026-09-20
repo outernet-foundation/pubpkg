@@ -122,9 +122,9 @@ def _next_release_tag(repo: str) -> str:
 
 
 @app.command()
-def main(config_path: Annotated[Path, typer.Option(help="Publish configuration JSON")]) -> None:
+def main(config: Annotated[Path, typer.Option(help="Publish configuration JSON")]) -> None:
     settings = Settings.model_validate({})
-    publish_config = load_config(config_path)
+    publish_config = load_config(config)
     tag = _next_release_tag(settings.github_repository)
 
     with ci_step("Compute service SHAs"):

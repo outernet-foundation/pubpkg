@@ -33,11 +33,11 @@ def _append_output(path: str | None, line: str) -> None:
 
 @app.command()
 def main(
-    config_path: Annotated[Path, typer.Option(help="Publish configuration JSON")] = DEFAULT_CONFIG_PATH,
+    config: Annotated[Path, typer.Option(help="Publish configuration JSON")] = DEFAULT_CONFIG_PATH,
     dry_run: Annotated[bool, typer.Option(help="Plan publishes without executing them")] = False,
 ) -> None:
     settings = Settings.model_validate({})
-    publish_config = load_config(config_path)
+    publish_config = load_config(config)
     ledger = GitLedger()
 
     with ci_step("Compute publish plan"):

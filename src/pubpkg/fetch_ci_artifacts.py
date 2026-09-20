@@ -22,11 +22,11 @@ class Settings(BaseSettings):
 
 @app.command()
 def main(
-    config_path: Annotated[Path, typer.Option(help="Publish configuration JSON")],
+    config: Annotated[Path, typer.Option(help="Publish configuration JSON")],
     ci_run_id: Annotated[str | None, typer.Option(help="Override CI run lookup with a known run ID")] = None,
 ) -> None:
     settings = Settings.model_validate({})
-    publish_config = load_config(config_path)
+    publish_config = load_config(config)
     repo = settings.github_repository
 
     if ci_run_id:
