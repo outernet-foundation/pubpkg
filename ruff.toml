@@ -1,0 +1,80 @@
+target-version = "py313"
+line-length = 120
+preview = true
+
+[lint]
+select = ["ALL"]
+ignore = [
+    # ── Permanent ─────────────────────────────────────────────────────────
+    # Type annotations — basedpyright strict mode handles this
+    "ANN",
+    # No docstrings, no copyright headers
+    "D",
+    "DOC",
+    "CPY",
+    # TODO/FIXME comment formatting
+    "TD",
+    "FIX",
+    # Exception message ergonomics — literal-indirection and custom-class churn without benefit
+    "raw-string-in-exception",
+    "f-string-in-exception",
+    "raise-vanilla-args",
+    # Class attribute names never conflict with builtins via self.x
+    "builtin-attribute-shadowing",
+    # Function-size counters — C901 already covers structural complexity
+    "too-many-return-statements",
+    "too-many-branches",
+    "too-many-arguments",
+    "too-many-locals",
+    "too-many-statements",
+    "too-many-positional-arguments",
+    # Typer's Option/Argument in argument defaults is its standard API pattern
+    "function-call-in-default-argument",
+    # Boolean parameters read fine as keyword-only flags here
+    "boolean-type-hint-positional-argument",
+    "boolean-default-value-positional-argument",
+    "boolean-positional-value-in-call",
+    # Relative imports are the intra-package convention
+    "relative-imports",
+    # Formatter-owned; enforced by `ruff format`
+    "missing-trailing-comma",
+    "unsorted-imports",
+    # Magic values in comparisons are readable in this CLI
+    "magic-value-comparison",
+    # The formatter owns wrapping; long string literals and URLs stay on one line
+    "line-too-long",
+    # src-layout tests need no __init__.py
+    "implicit-namespace-package",
+    # Runtime-used typing imports stay at module level
+    "typing-only-first-party-import",
+    "typing-only-third-party-import",
+    "typing-only-standard-library-import",
+    # Small literal tuples read fine in membership tests
+    "literal-membership",
+    # Feed and ledger adapters are classes so they satisfy their Protocols and can carry
+    # per-instance auth state (e.g. NuGetFeed's api key); not every adapter uses `self`
+    "no-self-use",
+
+    # ── Deferred to PLE-248 — Enforce the deferred ruff rules
+    # https://linear.app/plerionplatforms/issue/PLE-248
+    # Mirrors placeframe's root ruff.toml transitional Ticket-N blocks; lifting
+    # a rule here should happen alongside lifting it from placeframe's ruff.toml.
+    "complex-structure",     # function too complex — Ticket 9
+    "too-many-nested-blocks",  # too many nested blocks — Ticket 9
+
+    # ── Deferred to PLE-336 — Replace print() with structured logging
+    # https://linear.app/plerionplatforms/issue/PLE-336
+    "print",     # print found
+]
+
+[lint.per-file-ignores]
+"tests/**" = ["assert", "suspicious-subprocess-import", "start-process-with-partial-path", "no-self-use", "unused-method-argument"]
+# feeds.py catches subprocess.CalledProcessError raised by bashrun — the stdlib type, no way around the import
+"src/pubpkg/feeds.py" = ["suspicious-subprocess-import"]
+# config.py declares the default CI-runner scratch path shared by fetch-ci-artifacts and create-release
+"src/pubpkg/config.py" = ["hardcoded-temp-file"]
+# tests assert that same default
+"tests/test_config.py" = ["hardcoded-temp-file"]
+
+[lint.flake8-builtins]
+ignorelist = ["id", "map"]
