@@ -68,7 +68,11 @@ def _npm_url(identity: str, version: str) -> str:
     return f"https://www.npmjs.com/package/{identity}/v/{version}"
 
 
-FEED_URLS = {"nuget": _nuget_url, "npm": _npm_url}
+def _pypi_url(identity: str, version: str) -> str:
+    return f"https://pypi.org/project/{identity}/{version}"
+
+
+FEED_URLS = {"nuget": _nuget_url, "npm": _npm_url, "pypi": _pypi_url}
 
 
 def _build_release_notes(config: PublishConfig, service_shas: dict[str, str], ghcr_url: str) -> str:

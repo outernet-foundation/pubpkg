@@ -2,6 +2,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field, model_validator
 
+from .feeds import KNOWN_FEEDS
+
 
 class PackageConfig(BaseModel):
     name: str
@@ -47,6 +49,14 @@ class PublishConfig(BaseModel):
                 if pinned not in names:
                     raise ValueError(f"package '{package.name}' pins unknown package '{pinned}'")
 
+        return self
+
+    @model_validator(mode="after")
+    def validate_feed_names(self) -> "PublishConfig":
+        for package in self.packages:
+            unknown_feeds = set(package.feeds) - KNOWN_FEEDS
+            if unknown_feeds:
+                raise ValueError(f"package '{package.name}' declares unknown feeds: {sorted(unknown_feeds)}")
         return self
 
 
