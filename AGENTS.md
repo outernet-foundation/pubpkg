@@ -15,6 +15,7 @@ All are `uv run <name> --config <path>` from the consuming repo's root (config d
 | Command | Role |
 |---|---|
 | `publish-packages` | Compute the publish plan from the tag ledger + path-diff, publish every changed package to its feeds, bump and tag app versions, push per-package tags. `--dry-run` prints the plan only. |
+| `publish-dev` | Dev-channel mode: publish immutable `-dev.<run-id>` prereleases of every path-diff-changed package to its feeds. `--run-id` defaults to `GITHUB_RUN_ID`; never creates git tags, never touches app versions. |
 | `create-release` | Assemble release notes (service SHAs from the configured compose files, package versions with registry links, app versions), package CI artifacts, and cut the dated GitHub Release. |
 | `ensure-release-pr` | Maintain the standing `dev` → `main` "Next release" gate PR. |
 | `fetch-ci-artifacts` | Locate the successful CI run for the release SHA (via the merge commit's second parent) and download its artifacts, pruning non-release ones per the config's skip rules. |
@@ -34,11 +35,15 @@ CI and release workflows must not create commits on any branch — `dev` → `ma
 
 The repo is the release unit: repos release independently; one release event publishes every changed package in the repo together; a package unchanged since its last tag is skipped (registries are immutable — there is nothing to publish), and dependency pins absorb sibling bumps without republishing dependents.
 
+## Dev channel
+
+`publish-dev` publishes immutable prereleases of every path-diff-changed package; it creates no git tags, bumps no app versions, and opens no release. Versions are keyed by the CI run id and spelled per feed — `{base}-dev.{run_id}` where semver allows it (nuget, npm), `{base}.dev{run_id}` on PyPI — because no single string is both valid semver and valid PEP 440. The base is `next_version(last stable tag)`, so a package's dev versions share one base until the stable flow tags it. npm prereleases ride the single inert `dev` dist-tag so `latest` never moves. The job prints the exact published versions; that print is the consumption interface — consumers pin by hand, there is no discovery tooling.
+
 ## The Feed seam
 
 `feeds.Feed` is the registry adapter protocol (`publish(request: PublishRequest)`); `NuGetFeed`, `NpmFeed`, and `PyPIFeed` implement it. A feed's registry identity (nuget package id, npm name, PyPI distribution name) is config data, not code — the same package can publish to several feeds at one version. Config-declared feed names are validated against `feeds.KNOWN_FEEDS` at load time.
 
-`PyPIFeed` shells out to `uv build` + `uv publish` and authenticates via trusted publishing (OIDC): it takes no credential, so the consuming workflow needs `id-token: write` and the PyPI project needs a configured (or pending) publisher for that repo/workflow. Idempotent re-publishing is handled by `uv publish --check-url` against the simple index. PyPI dependency pins are refused (`dependency_versions` must be empty) until a concrete in-repo consumer exists.
+`PyPIFeed` shells out to `uv build` + `uv publish` and authenticates via trusted publishing (OIDC): it takes no credential, so the consuming workflow needs `id-token: write` and the PyPI project needs a configured (or pending) publisher for that repo/workflow. Idempotent re-publishing is handled by `uv publish --check-url` against the simple index. PyPI dependency pins are refused (`dependency_versions` must be empty) until a concrete in-repo consumer exists. npm authenticates the same way — trusted publishing via `--provenance`, no token plumbing — and npm allows one trusted publisher per package, bound to a single workflow filename: every workflow that publishes a given package to npm must be the same file.
 
 ## Config
 

@@ -50,10 +50,13 @@ and invoke from CI:
 
 ```bash
 uv run --no-sync publish-packages --config build/publish-config.json
+uv run --no-sync publish-dev --config build/publish-config.json --run-id ${{ github.event.workflow_run.id }}
 uv run --no-sync create-release --config build/publish-config.json
 ```
 
-Environment (via pydantic-settings): `GITHUB_WORKSPACE`, `GITHUB_REPOSITORY`, `GITHUB_SHA`, `GITHUB_STEP_SUMMARY`, `GITHUB_OUTPUT`, `NUGET_API_KEY`.
+`publish-dev` is the dev-channel job: it publishes immutable `-dev.<run-id>` prereleases (`X.Y.Z.dev<run-id>` on PyPI) of every changed package on a green push — no git tags, npm `latest` untouched — and prints the exact versions to pin.
+
+Environment (via pydantic-settings): `GITHUB_WORKSPACE`, `GITHUB_REPOSITORY`, `GITHUB_SHA`, `GITHUB_STEP_SUMMARY`, `GITHUB_OUTPUT`, `GITHUB_RUN_ID`, `NUGET_API_KEY`.
 
 ## Development
 
