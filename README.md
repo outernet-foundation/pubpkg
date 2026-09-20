@@ -1,13 +1,13 @@
 # pubpkg
 
-Publication machinery for multi-feed package releases: a per-package git-tag ledger, path-diff change detection, ephemeral version patching, per-registry feed adapters (nuget, npm/UPM), release orchestration, and an OCI mirror scan — all driven by a declarative, consumer-owned config.
+Publication machinery for multi-feed package releases: a per-package git-tag ledger, path-diff change detection, ephemeral version patching, per-registry feed adapters (nuget, npm/UPM, PyPI), release orchestration, and an OCI mirror scan — all driven by a declarative, consumer-owned config.
 
-Every consuming repo keeps only a `publish-config.json` (package identities, paths, tag prefixes, registry mappings) and workflow steps that are thin `uv run` invocations. See [`AGENTS.md`](./AGENTS.md) for the invariants (CI-commit-free releases, tag-ledger versioning, `0.0.0-local` ephemeral patching) and the command catalog.
+Every consuming repo keeps only a `publish-config.json` (package identities, paths, tag prefixes, registry mappings) and workflow steps that are thin `uv run` invocations. See [`AGENTS.md`](./AGENTS.md) for the invariants (CI-commit-free releases, tag-ledger versioning, ephemeral `0.0.0-local` / `0.0.0.dev0` version patching) and the command catalog.
 
 ## Requirements
 
 - Python 3.13+ and [uv](https://docs.astral.sh/uv/)
-- At runtime: `git`, `gh`, `dotnet` (nuget publish), `node`/`npm` (npm publish), `crane` (installed by `mirror-images`)
+- At runtime: `git`, `gh`, `dotnet` (nuget publish), `node`/`npm` (npm publish), `uv` (PyPI publish via trusted publishing), `crane` (installed by `mirror-images`)
 
 ## Consuming from another repo
 

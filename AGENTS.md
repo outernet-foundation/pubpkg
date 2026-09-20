@@ -28,6 +28,7 @@ CI and release workflows must not create commits on any branch — `dev` → `ma
 - **Change detection**: `git diff --quiet <last-tag> HEAD -- <path>`, never content hashing. `depends_on` cascades trigger dependents even when their own paths are unchanged.
 - **Version scheme**: first release `0.1.0`, then patch bumps from the tag ledger. Per-package numbers are independent within one release event — no lockstep.
 - **Unity `package.json` versions**: permanently `0.0.0-local` in the repo; patched ephemerally during `npm publish` and restored immediately — never committed.
+- **Python `pyproject.toml` versions**: permanently `0.0.0.dev0` in the repo (`0.0.0-local` is not valid PEP 440); patched ephemerally around `uv build` and restored immediately — never committed. The sdist/wheel carries the real version; the committed file never does.
 
 ## Release units
 
@@ -35,7 +36,9 @@ The repo is the release unit: repos release independently; one release event pub
 
 ## The Feed seam
 
-`feeds.Feed` is the registry adapter protocol (`publish(request: PublishRequest)`); `NuGetFeed` and `NpmFeed` implement it today and further registries (PyPI) join `build_feeds` as adapters over the same core. A feed's registry identity (nuget package id, npm name) is config data, not code — the same package can publish to several feeds at one version.
+`feeds.Feed` is the registry adapter protocol (`publish(request: PublishRequest)`); `NuGetFeed`, `NpmFeed`, and `PyPIFeed` implement it. A feed's registry identity (nuget package id, npm name, PyPI distribution name) is config data, not code — the same package can publish to several feeds at one version. Config-declared feed names are validated against `feeds.KNOWN_FEEDS` at load time.
+
+`PyPIFeed` shells out to `uv build` + `uv publish` and authenticates via trusted publishing (OIDC): it takes no credential, so the consuming workflow needs `id-token: write` and the PyPI project needs a configured (or pending) publisher for that repo/workflow. Idempotent re-publishing is handled by `uv publish --check-url` against the simple index. PyPI dependency pins are refused (`dependency_versions` must be empty) until a concrete in-repo consumer exists.
 
 ## Config
 
