@@ -34,9 +34,9 @@ include = [
 ]
 
 [tool.uv.sources]
-bashrun = { git = "https://github.com/outernet-foundation/bashrun.git", rev = "1a0add1eb9e53e19245dcdda3e2018577b4e1153" }
-stack-lifecycle = { git = "https://github.com/outernet-foundation/stack-lifecycle.git", rev = "8132ab66d6c6e8342d299fc4e76c8f9fe93ea2c1" }
-unity-buildkit = { git = "https://github.com/outernet-foundation/unity-buildkit.git", rev = "70741126846015e001952d4465b7512c75643b2f" }
+bashrun = { git = "https://github.com/outernet-foundation/bashrun.git", rev = "0a9e9a466a3ef99c95e316a6f46842741d32ca11" }
+stack-lifecycle = { git = "https://github.com/outernet-foundation/stack-lifecycle.git", rev = "da2c88cab0500b9aabaeaffb81429adde44fcced" }
+unity-buildkit = { git = "https://github.com/outernet-foundation/unity-buildkit.git", rev = "12f5d7458386ac949490b603ef2c27385ea1012c" }
 
 [tool.basedpyright]
 venvPath = "."

@@ -35,7 +35,7 @@ wheels = [
 [[package]]
 name = "bashrun"
 version = "0.1.0"
-source = { git = "https://github.com/outernet-foundation/bashrun.git?rev=1a0add1eb9e53e19245dcdda3e2018577b4e1153#1a0add1eb9e53e19245dcdda3e2018577b4e1153" }
+source = { git = "https://github.com/outernet-foundation/bashrun.git?rev=0a9e9a466a3ef99c95e316a6f46842741d32ca11#0a9e9a466a3ef99c95e316a6f46842741d32ca11" }
 
 [[package]]
 name = "colorama"
@@ -141,12 +141,12 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "bashrun", git = "https://github.com/outernet-foundation/bashrun.git?rev=1a0add1eb9e53e19245dcdda3e2018577b4e1153" },
+    { name = "bashrun", git = "https://github.com/outernet-foundation/bashrun.git?rev=0a9e9a466a3ef99c95e316a6f46842741d32ca11" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pydantic-settings", specifier = ">=2.9.1" },
-    { name = "stack-lifecycle", git = "https://github.com/outernet-foundation/stack-lifecycle.git?rev=8132ab66d6c6e8342d299fc4e76c8f9fe93ea2c1" },
+    { name = "stack-lifecycle", git = "https://github.com/outernet-foundation/stack-lifecycle.git?rev=da2c88cab0500b9aabaeaffb81429adde44fcced" },
     { name = "typer", specifier = ">=0.17.4" },
-    { name = "unity-buildkit", git = "https://github.com/outernet-foundation/unity-buildkit.git?rev=70741126846015e001952d4465b7512c75643b2f" },
+    { name = "unity-buildkit", git = "https://github.com/outernet-foundation/unity-buildkit.git?rev=12f5d7458386ac949490b603ef2c27385ea1012c" },
 ]
 
 [package.metadata.requires-dev]
@@ -361,7 +361,7 @@ wheels = [
 [[package]]
 name = "stack-lifecycle"
 version = "0.1.0"
-source = { git = "https://github.com/outernet-foundation/stack-lifecycle.git?rev=8132ab66d6c6e8342d299fc4e76c8f9fe93ea2c1#8132ab66d6c6e8342d299fc4e76c8f9fe93ea2c1" }
+source = { git = "https://github.com/outernet-foundation/stack-lifecycle.git?rev=da2c88cab0500b9aabaeaffb81429adde44fcced#da2c88cab0500b9aabaeaffb81429adde44fcced" }
 dependencies = [
     { name = "bashrun" },
     { name = "pathspec" },
@@ -410,7 +410,7 @@ wheels = [
 [[package]]
 name = "unity-buildkit"
 version = "0.1.0"
-source = { git = "https://github.com/outernet-foundation/unity-buildkit.git?rev=70741126846015e001952d4465b7512c75643b2f#70741126846015e001952d4465b7512c75643b2f" }
+source = { git = "https://github.com/outernet-foundation/unity-buildkit.git?rev=12f5d7458386ac949490b603ef2c27385ea1012c#12f5d7458386ac949490b603ef2c27385ea1012c" }
 dependencies = [
     { name = "bashrun" },
     { name = "pydantic" },
