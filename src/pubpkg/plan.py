@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Protocol
 
 from .config import PackageConfig
+from .feeds import DEV_VERSION_FORMATS
 
 FIRST_VERSION = "0.1.0"
 UNCHANGED_FALLBACK_VERSION = "0.0.0"
@@ -60,4 +61,23 @@ def render_summary(plans: dict[str, PackagePlan]) -> str:
         "|---|---|---|",
     ]
     lines.extend(f"| {plan.name} | {plan.publish} | {plan.version} |" for plan in plans.values())
+    return "\n".join(lines)
+
+
+def render_dev_summary(packages: list[PackageConfig], plans: dict[str, PackagePlan], run_id: str) -> str:
+    lines = [
+        "### Dev Publish Plan",
+        "| Package | Publish | Versions |",
+        "|---|---|---|",
+    ]
+    for package in packages:
+        plan = plans[package.name]
+        if not plan.publish:
+            lines.append(f"| {plan.name} | False | - |")
+            continue
+        versions = ", ".join(
+            f"{feed_name}: {identity} @ {DEV_VERSION_FORMATS[feed_name](plan.version, run_id)}"
+            for feed_name, identity in package.feeds.items()
+        )
+        lines.append(f"| {plan.name} | True | {versions} |")
     return "\n".join(lines)

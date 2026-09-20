@@ -3,7 +3,16 @@ from pathlib import Path
 
 import pytest
 
-from pubpkg.feeds import ephemeral_manifest_patch, ephemeral_pyproject_patch, patch_project_version
+from pubpkg import NpmFeed, PublishRequest
+from pubpkg.feeds import (
+    DEV_VERSION_FORMATS,
+    KNOWN_FEEDS,
+    ephemeral_manifest_patch,
+    ephemeral_pyproject_patch,
+    patch_project_version,
+    pep440_dev_version,
+    semver_dev_version,
+)
 
 PYPROJECT = (
     "[project]\n"
@@ -17,6 +26,22 @@ PYPROJECT = (
     "[build-system]\n"
     'requires = ["hatchling"]\n'
 )
+
+
+class CommandRecorder:
+    def __init__(self) -> None:
+        self.commands: list[str] = []
+
+    def __call__(
+        self,
+        command: str,
+        *,
+        cwd: Path | None = None,
+        stdin_text: str | None = None,
+        env: dict[str, str] | None = None,
+    ) -> str:
+        self.commands.append(command)
+        return ""
 
 
 def write_manifest(tmp_path: Path) -> Path:
@@ -82,3 +107,43 @@ def test_ephemeral_pyproject_patch_restores_on_error(tmp_path: Path) -> None:
         raise RuntimeError("publish exploded")
 
     assert manifest_path.read_text(encoding="utf-8") == PYPROJECT
+
+
+def test_dev_version_spellings_per_registry() -> None:
+    assert semver_dev_version("0.1.8", "123456") == "0.1.8-dev.123456"
+    assert pep440_dev_version("0.1.8", "123456") == "0.1.8.dev123456"
+
+
+def test_dev_version_formats_cover_every_known_feed() -> None:
+    assert set(DEV_VERSION_FORMATS) == KNOWN_FEEDS
+
+
+def test_npm_publish_rides_the_dev_dist_tag(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    manifest_path = write_manifest(tmp_path)
+    recorder = CommandRecorder()
+    monkeypatch.setattr("pubpkg.feeds.bash_output", recorder)
+
+    NpmFeed().publish(
+        PublishRequest(
+            path=tmp_path,
+            identity="org.outernet.placeframe",
+            version="0.2.1-dev.42",
+            dependency_versions={},
+            dist_tag="dev",
+        )
+    )
+
+    assert recorder.commands == ["npm publish --access public --provenance --tag dev"]
+    assert json.loads(manifest_path.read_text(encoding="utf-8"))["version"] == "0.0.0-local"
+
+
+def test_npm_publish_without_dist_tag_leaves_latest_alone(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    write_manifest(tmp_path)
+    recorder = CommandRecorder()
+    monkeypatch.setattr("pubpkg.feeds.bash_output", recorder)
+
+    NpmFeed().publish(
+        PublishRequest(path=tmp_path, identity="org.outernet.placeframe", version="0.2.1", dependency_versions={})
+    )
+
+    assert recorder.commands == ["npm publish --access public --provenance"]

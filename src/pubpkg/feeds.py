@@ -1,6 +1,6 @@
 import json
 import re
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -12,6 +12,7 @@ from bashrun import bash, bash_output
 NUGET_SOURCE = "https://api.nuget.org/v3/index.json"
 PYPI_SIMPLE_INDEX = "https://pypi.org/simple/"
 PYPROJECT_VERSION_PATTERN = re.compile(r'^version\s*=\s*"[^"]*"')
+NPM_DEV_DIST_TAG = "dev"
 
 
 @dataclass(frozen=True)
@@ -20,6 +21,7 @@ class PublishRequest:
     identity: str
     version: str
     dependency_versions: dict[str, str]
+    dist_tag: str | None = None
 
 
 class Feed(Protocol):
@@ -40,9 +42,12 @@ class NuGetFeed:
 
 class NpmFeed:
     def publish(self, request: PublishRequest) -> None:
+        command = "npm publish --access public --provenance"
+        if request.dist_tag:
+            command += f" --tag {request.dist_tag}"
         with ephemeral_manifest_patch(request.path, request.version, request.dependency_versions):
             try:
-                bash_output("npm publish --access public --provenance", cwd=request.path)
+                bash_output(command, cwd=request.path)
             except CalledProcessError as e:
                 stderr = e.stderr or ""
                 if "EPUBLISHCONFLICT" in stderr or "cannot publish over existing version" in stderr:
@@ -100,6 +105,21 @@ def patch_project_version(original: str, version: str) -> str:
 
 
 KNOWN_FEEDS = frozenset({"nuget", "npm", "pypi"})
+
+
+def semver_dev_version(base_version: str, run_id: str) -> str:
+    return f"{base_version}-dev.{run_id}"
+
+
+def pep440_dev_version(base_version: str, run_id: str) -> str:
+    return f"{base_version}.dev{run_id}"
+
+
+DEV_VERSION_FORMATS: dict[str, Callable[[str, str], str]] = {
+    "nuget": semver_dev_version,
+    "npm": semver_dev_version,
+    "pypi": pep440_dev_version,
+}
 
 
 def build_feeds(nuget_api_key: str) -> dict[str, Feed]:

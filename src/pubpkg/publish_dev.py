@@ -1,0 +1,101 @@
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Annotated
+
+import typer
+from pydantic_settings import BaseSettings
+from unity_buildkit.ci_step import ci_step
+from unity_buildkit.setup import configure_git, free_disk_space, install_dotnet, install_node
+
+from .config import load_config
+from .feeds import DEV_VERSION_FORMATS, NPM_DEV_DIST_TAG, PublishRequest, build_feeds
+from .ledger import GitLedger
+from .plan import compute_plan, render_dev_summary, resolved_dependency_versions
+
+app = typer.Typer(add_completion=False, pretty_exceptions_show_locals=False)
+
+DEFAULT_CONFIG_PATH = Path("build/publish-config.json")
+
+
+class Settings(BaseSettings):
+    github_workspace: str = ""
+    github_step_summary: str | None = None
+    github_run_id: str = ""
+    nuget_api_key: str = ""
+
+
+def _write_summary(path: str | None, text: str) -> None:
+    if path:
+        with Path(path).open("a", encoding="utf-8") as file:
+            file.write(text + "\n")
+
+
+@app.command()
+def main(
+    config: Annotated[Path, typer.Option(help="Publish configuration JSON")] = DEFAULT_CONFIG_PATH,
+    dry_run: Annotated[bool, typer.Option(help="Plan publishes without executing them")] = False,
+    run_id: Annotated[
+        str, typer.Option(help="CI run id baked into every dev version (defaults to GITHUB_RUN_ID)")
+    ] = "",
+) -> None:
+    settings = Settings.model_validate({})
+    resolved_run_id = run_id or settings.github_run_id
+    if not resolved_run_id.isdigit():
+        raise SystemExit("dev run id must be all digits: pass --run-id or set GITHUB_RUN_ID")
+
+    publish_config = load_config(config)
+    ledger = GitLedger()
+
+    with ci_step("Compute dev publish plan"):
+        plans = compute_plan(publish_config.packages, ledger)
+
+        summary = render_dev_summary(publish_config.packages, plans, resolved_run_id)
+        print(summary)
+        _write_summary(settings.github_step_summary, summary)
+
+        if not any(plan.publish for plan in plans.values()):
+            print("Nothing to publish")
+            return
+
+        if dry_run:
+            print("Dry run — skipping publish")
+            return
+
+    with ci_step("Setup"):
+        configure_git(settings.github_workspace)
+        free_disk_space()
+        install_dotnet("8.0")
+        install_node("24", "https://registry.npmjs.org")
+
+    feeds = build_feeds(settings.nuget_api_key)
+    published: list[tuple[str, str, str]] = []
+    for package in publish_config.packages:
+        plan = plans[package.name]
+        if not plan.publish:
+            continue
+        dependency_versions = resolved_dependency_versions(package, plans)
+        for feed_name, identity in package.feeds.items():
+            dev_version = DEV_VERSION_FORMATS[feed_name](plan.version, resolved_run_id)
+            with ci_step(f"Publish {feed_name} ({package.name}) {dev_version}"):
+                feeds[feed_name].publish(
+                    PublishRequest(
+                        path=package.path,
+                        identity=identity,
+                        version=dev_version,
+                        dependency_versions={
+                            dependency_name: DEV_VERSION_FORMATS[feed_name](version, resolved_run_id)
+                            for dependency_name, version in dependency_versions.items()
+                        },
+                        dist_tag=NPM_DEV_DIST_TAG if feed_name == "npm" else None,
+                    )
+                )
+            published.append((feed_name, identity, dev_version))
+
+    recap = "\n".join([
+        "### Published dev versions",
+        *(f"{feed_name}: {identity} @ {version}" for feed_name, identity, version in published),
+    ])
+    print(recap)
+    print("Consume these by exact version pin - there is no discovery tooling by design")
+    _write_summary(settings.github_step_summary, recap)

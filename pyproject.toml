@@ -24,6 +24,7 @@ create-release = "pubpkg.create_release:app"
 ensure-release-pr = "pubpkg.ensure_release_pr:app"
 fetch-ci-artifacts = "pubpkg.fetch_ci_artifacts:app"
 mirror-images = "pubpkg.mirror_images:app"
+publish-dev = "pubpkg.publish_dev:app"
 publish-packages = "pubpkg.publish_packages:app"
 
 [tool.hatch.build.targets.wheel]

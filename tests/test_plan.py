@@ -1,6 +1,13 @@
 from pathlib import Path
 
-from pubpkg import PackageConfig, compute_plan, next_version, render_summary, resolved_dependency_versions
+from pubpkg import (
+    PackageConfig,
+    compute_plan,
+    next_version,
+    render_dev_summary,
+    render_summary,
+    resolved_dependency_versions,
+)
 from pubpkg.ledger import is_stable_version
 from pubpkg.plan import TagLedger
 
@@ -26,7 +33,7 @@ class FakeLedger:
 
 
 API_CLIENT = PackageConfig(
-    name="placeframe-api-client", path=Path("packages/generated/csharp/api-client"), feeds={"nuget": "X"}
+    name="placeframe-api-client", path=Path("packages/generated/csharp/api-client"), feeds={"nuget": "X", "npm": "N"}
 )
 CORE = PackageConfig(name="placeframe-core", path=Path("packages/unity/Core"), feeds={"npm": "Y"})
 ARFOUNDATION = PackageConfig(
@@ -36,7 +43,8 @@ ARFOUNDATION = PackageConfig(
     depends_on=["placeframe-core"],
     dependency_pins={"org.outernet.placeframe": "placeframe-core"},
 )
-PACKAGES = [API_CLIENT, CORE, ARFOUNDATION]
+COMMON = PackageConfig(name="placeframe-common", path=Path("packages/python/common"), feeds={"pypi": "P"})
+PACKAGES = [API_CLIENT, CORE, ARFOUNDATION, COMMON]
 
 
 def test_next_version_first_and_bump():
@@ -135,6 +143,25 @@ def test_render_summary_lists_every_package():
     assert "| placeframe-api-client | True | 0.1.0 |" in summary
     assert "| placeframe-core | False | 0.2.0 |" in summary
     assert "| placeframe-arfoundation | False | 0.0.0 |" in summary
+
+
+def test_render_dev_summary_lists_per_feed_versions():
+    ledger = FakeLedger(
+        latest={},
+        changed={
+            "packages/generated/csharp/api-client": True,
+            "packages/unity/Core": False,
+            "packages/unity/ARFoundation": False,
+            "packages/python/common": True,
+        },
+    )
+    plans = compute_plan(PACKAGES, ledger)
+
+    summary = render_dev_summary(PACKAGES, plans, "4242")
+
+    assert "| placeframe-api-client | True | nuget: X @ 0.1.0-dev.4242, npm: N @ 0.1.0-dev.4242 |" in summary
+    assert "| placeframe-common | True | pypi: P @ 0.1.0.dev4242 |" in summary
+    assert "| placeframe-core | False | - |" in summary
 
 
 def test_fake_ledger_satisfies_protocol():
