@@ -146,7 +146,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.9.1" },
     { name = "stack-lifecycle", git = "https://github.com/outernet-foundation/stack-lifecycle.git?rev=da2c88cab0500b9aabaeaffb81429adde44fcced" },
     { name = "typer", specifier = ">=0.17.4" },
-    { name = "unity-buildkit", git = "https://github.com/outernet-foundation/unity-buildkit.git?rev=12f5d7458386ac949490b603ef2c27385ea1012c" },
+    { name = "unity-buildkit", git = "https://github.com/outernet-foundation/unity-buildkit.git?rev=df5997fd8b0fae3b1ce700b9edecd15b2b096f12" },
 ]
 
 [package.metadata.requires-dev]
@@ -410,7 +410,7 @@ wheels = [
 [[package]]
 name = "unity-buildkit"
 version = "0.1.0"
-source = { git = "https://github.com/outernet-foundation/unity-buildkit.git?rev=12f5d7458386ac949490b603ef2c27385ea1012c#12f5d7458386ac949490b603ef2c27385ea1012c" }
+source = { git = "https://github.com/outernet-foundation/unity-buildkit.git?rev=df5997fd8b0fae3b1ce700b9edecd15b2b096f12#df5997fd8b0fae3b1ce700b9edecd15b2b096f12" }
 dependencies = [
     { name = "bashrun" },
     { name = "pydantic" },
