@@ -1,16 +1,16 @@
-# pubpkg
+# release-kit
 
 ## What this is
 
-The publication machinery for outernet-foundation repos: the publish pipeline, the per-package tag ledger and path-diff change detection, ephemeral version patching, release orchestration, and the OCI mirror scan. A standalone repo (sibling of `unity-buildkit` / `stack-toolkit` / `bashrun`), published to PyPI and consumed **uvx-isolated** — release workflows invoke `uvx --from pubpkg==<version> <command>`; it is a project dependency of nothing. The reason is structural: every tool repo it publishes sits inside its own dependency graph (bashrun, stack-toolkit, unity-buildkit are pubpkg's runtime deps), so a project-level pubpkg edge in those repos is a resolver cycle plus a root-version conflict against the `0.0.0.dev0` sentinel. Consumers outside that graph (placeframe) use uvx for the same shape, keeping one consumption model.
+The publication machinery for outernet-foundation repos: the publish pipeline, the per-package tag ledger and path-diff change detection, ephemeral version patching, release orchestration, and the OCI mirror scan. A standalone repo (sibling of `unity-buildkit` / `stack-toolkit` / `bashrun`), published to PyPI and consumed **uvx-isolated** — release workflows invoke `uvx --from release-kit==<version> <command>`; it is a project dependency of nothing. The reason is structural: every tool repo it publishes sits inside its own dependency graph (bashrun, stack-toolkit, unity-buildkit are release-kit's runtime deps), so a project-level release-kit edge in those repos is a resolver cycle plus a root-version conflict against the `0.0.0.dev0` sentinel. Consumers outside that graph (placeframe) use uvx for the same shape, keeping one consumption model.
 
 The consumer owns everything declarative: package identities, paths, tag prefixes, registry mappings, compose files, and the CI workflow name live in a consumer-authored `publish-config.json`; every command here reads that file. Per-repo copies of this machinery are refused, as are per-ecosystem splits — the seam is internal: one `Feed` adapter per registry over the shared ledger/diff/versioning core.
 
-The package is `pubpkg` (src-layout under `src/pubpkg/`). Runtime dependencies: `bashrun` (all shell-outs), `stack-toolkit` (`compute_service_shas`, `collect_repo_references`), `unity-buildkit` (`ci_step`, runner setup), `pydantic`/`pydantic-settings` (config + CI env), `typer` (CLIs) — all from PyPI.
+The package is `release-kit` (src-layout under `src/release_kit/`; import `release_kit`), renamed from `pubpkg` before its first publish — PyPI's registrar rejects names merely similar to existing ones, so `pubpkg` was unclaimable and nothing on PyPI ever carried it. Runtime dependencies: `bashrun` (all shell-outs), `stack-toolkit` (`compute_service_shas`, `collect_repo_references`), `unity-buildkit` (`ci_step`, runner setup), `pydantic`/`pydantic-settings` (config + CI env), `typer` (CLIs) — all from PyPI.
 
 ## Self-publication
 
-pubpkg publishes itself from its own checkout: `ci.yml`'s `publish` job (main-push, gated on the check job) runs `uv run publish-packages --config publish-config.json` — the repo *is* pubpkg, so no uvx bootstrap and no self-reference. Its dependencies must all exist on PyPI before its first publish (they did: it converted last, leaves-first ordering). The committed `pyproject.toml` version is permanently the `0.0.0.dev0` sentinel; the `pubpkg-v*` tags are the version ledger. API-breaking changes ship with a manually bumped version — patch-auto assumes additive changes.
+release-kit publishes itself from its own checkout: `ci.yml`'s `publish` job (main-push, gated on the check job) runs `uv run publish-packages --config publish-config.json` — the repo *is* release-kit, so no uvx bootstrap and no self-reference. Its dependencies must all exist on PyPI before its first publish (they did: it converted last, leaves-first ordering). The committed `pyproject.toml` version is permanently the `0.0.0.dev0` sentinel; the `release-kit-v*` tags are the version ledger. API-breaking changes ship with a manually bumped version — patch-auto assumes additive changes.
 
 ## Commands
 
