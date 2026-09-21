@@ -42,6 +42,20 @@ wheels = [
 ]
 
 [[package]]
+name = "ci-devkit"
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "bashrun" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9c/58/e0c1f17fbcf6e7adcc4192d5d0a4300be2b0d0ffd055ff746f0116ad587a/ci_devkit-0.1.0.tar.gz", hash = "sha256:ac1a463effe9a2760ea6d18301d6938c6a47d07cee9d8e14bae0c2d20ab0f377", size = 38920, upload-time = "2026-09-21T22:54:14.99Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c3/b3/ee5474174a4d8e9626eb0cbac234ea99908ed3988cc8b807fc8f4a2680a6/ci_devkit-0.1.0-py3-none-any.whl", hash = "sha256:3df3faf0821ffc1c32403f0af5b6b1ceb312d4912cae5b58aaf97b20c251874d", size = 26289, upload-time = "2026-09-21T22:54:13.759Z" },
+]
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 source = { registry = "https://pypi.org/simple" }
@@ -301,11 +315,11 @@ version = "0.0.0.dev0"
 source = { editable = "." }
 dependencies = [
     { name = "bashrun" },
+    { name = "ci-devkit" },
     { name = "docker-devkit" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "typer" },
-    { name = "unity-devkit" },
 ]
 
 [package.dev-dependencies]
@@ -318,11 +332,11 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "bashrun", specifier = ">=0.1.0" },
+    { name = "ci-devkit", specifier = ">=0.1.0" },
     { name = "docker-devkit", specifier = ">=0.1.0" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pydantic-settings", specifier = ">=2.9.1" },
     { name = "typer", specifier = ">=0.17.4" },
-    { name = "unity-devkit", specifier = ">=0.1.0" },
 ]
 
 [package.metadata.requires-dev]
@@ -413,19 +427,4 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a3/26/b09b8010994eccc3c09092e6b34058f36a460eea2d4c3e8b910c695975a0/typing_inspection-0.4.4.tar.gz", hash = "sha256:547274fa6b0a561ccf549cc9524b999a578e737d015d8709d021f9d0d13bea47", size = 76928, upload-time = "2026-08-12T12:37:25.997Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/67/81/4add07e5172b7ac40d8ed5ff580409a7801a4fe26d529bdd915401dabfbe/typing_inspection-0.4.4-py3-none-any.whl", hash = "sha256:65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147", size = 14750, upload-time = "2026-08-12T12:37:24.648Z" },
-]
-
-[[package]]
-name = "unity-devkit"
-version = "0.1.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "bashrun" },
-    { name = "pydantic" },
-    { name = "pydantic-settings" },
-    { name = "typer" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/6d/04/0a44e72ea2d4d9ecfacdaaadc45e3bf287c9b77232ff5a6a3f97d73a65f0/unity_devkit-0.1.0.tar.gz", hash = "sha256:5c0d607d7ff66216f037bf0276683cbda4d6b2553480761fbd175c9029fc8de0", size = 50144, upload-time = "2026-09-21T22:17:36.414Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e4/f9/75c751b4a5e6ef485c912b456da3685ec80a47a08a69082d2912cda166db/unity_devkit-0.1.0-py3-none-any.whl", hash = "sha256:72f84a3560bf795f335634b8c67420d648c6df3fd2432d954dbb0c7104546a21", size = 38841, upload-time = "2026-09-21T22:17:35.41Z" },
 ]
