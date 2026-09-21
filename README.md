@@ -2,7 +2,7 @@
 
 Publication machinery for multi-feed package releases: a per-package git-tag ledger, path-diff change detection, ephemeral version patching, per-registry feed adapters (nuget, npm/UPM, PyPI), release orchestration, and an OCI mirror scan — all driven by a declarative, consumer-owned config.
 
-Every consuming repo keeps only a `publish-config.json` (package identities, paths, tag prefixes, registry mappings) and workflow steps that are thin `uv run` invocations. See [`AGENTS.md`](./AGENTS.md) for the invariants (CI-commit-free releases, tag-ledger versioning, ephemeral `0.0.0-local` / `0.0.0.dev0` version patching) and the command catalog.
+Every consuming repo keeps only a `publish-config.json` (package identities, paths, tag prefixes, registry mappings) and workflow steps that are thin `uvx` invocations. See [`AGENTS.md`](./AGENTS.md) for the invariants (CI-commit-free releases, tag-ledger versioning, ephemeral `0.0.0-local` / `0.0.0.dev0` version patching) and the command catalog.
 
 ## Requirements
 
@@ -11,17 +11,10 @@ Every consuming repo keeps only a `publish-config.json` (package identities, pat
 
 ## Consuming from another repo
 
-git-reference the package and declare its siblings' sources alongside it (uv's `[tool.uv.sources]` are not transitive):
+Install nothing — pubpkg is consumed **uvx-isolated** (it is a project dependency of nothing: the tool repos it publishes sit inside its own dependency graph, where a project-level pubpkg edge is a resolver cycle). Pin the exact version in the workflow:
 
-```toml
-[project]
-dependencies = ["pubpkg"]
-
-[tool.uv.sources]
-pubpkg = { git = "https://github.com/outernet-foundation/pubpkg.git", rev = "<pin-a-commit-sha>" }
-bashrun = { git = "https://github.com/outernet-foundation/bashrun.git", rev = "<pin-a-commit-sha>" }
-stack-lifecycle = { git = "https://github.com/outernet-foundation/stack-lifecycle.git", rev = "<pin-a-commit-sha>" }
-unity-buildkit = { git = "https://github.com/outernet-foundation/unity-buildkit.git", rev = "<pin-a-commit-sha>" }
+```bash
+uvx --from pubpkg==0.1.0 publish-packages --config build/publish-config.json
 ```
 
 Then author `build/publish-config.json`:
@@ -49,9 +42,9 @@ Then author `build/publish-config.json`:
 and invoke from CI:
 
 ```bash
-uv run --no-sync publish-packages --config build/publish-config.json
-uv run --no-sync publish-dev --config build/publish-config.json --run-id ${{ github.event.workflow_run.id }}
-uv run --no-sync create-release --config build/publish-config.json
+uvx --from pubpkg==0.1.0 publish-packages --config build/publish-config.json
+uvx --from pubpkg==0.1.0 publish-dev --config build/publish-config.json --run-id ${{ github.event.workflow_run.id }}
+uvx --from pubpkg==0.1.0 create-release --config build/publish-config.json
 ```
 
 `publish-dev` is the dev-channel job: it publishes immutable `-dev.<run-id>` prereleases (`X.Y.Z.dev<run-id>` on PyPI) of every changed package on a green push — no git tags, npm `latest` untouched — and prints the exact versions to pin.
