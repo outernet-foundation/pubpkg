@@ -1,9 +1,9 @@
 {
   "packages": [
     {
-      "name": "pubpkg",
+      "name": "release-kit",
       "path": ".",
-      "feeds": { "pypi": "pubpkg" }
+      "feeds": { "pypi": "release-kit" }
     }
   ],
   "ci_workflow": "ci.yml",

@@ -1,5 +1,5 @@
 [project]
-name = "pubpkg"
+name = "release-kit"
 version = "0.0.0.dev0"
 description = "Publication machinery: per-package tag ledger, path-diff change detection, ephemeral version patching, and per-registry feed adapters (nuget, npm/UPM) driven by a declarative consumer-owned config"
 requires-python = ">=3.13"
@@ -20,17 +20,17 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project.scripts]
-create-release = "pubpkg.create_release:app"
-ensure-release-pr = "pubpkg.ensure_release_pr:app"
-fetch-ci-artifacts = "pubpkg.fetch_ci_artifacts:app"
-mirror-images = "pubpkg.mirror_images:app"
-publish-dev = "pubpkg.publish_dev:app"
-publish-packages = "pubpkg.publish_packages:app"
+create-release = "release_kit.create_release:app"
+ensure-release-pr = "release_kit.ensure_release_pr:app"
+fetch-ci-artifacts = "release_kit.fetch_ci_artifacts:app"
+mirror-images = "release_kit.mirror_images:app"
+publish-dev = "release_kit.publish_dev:app"
+publish-packages = "release_kit.publish_packages:app"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/pubpkg"]
+packages = ["src/release_kit"]
 include = [
-    "src/pubpkg/py.typed",
+    "src/release_kit/py.typed",
 ]
 
 [tool.basedpyright]

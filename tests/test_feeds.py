@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from pubpkg import NpmFeed, PublishRequest
-from pubpkg.feeds import (
+from release_kit import NpmFeed, PublishRequest
+from release_kit.feeds import (
     DEV_VERSION_FORMATS,
     KNOWN_FEEDS,
     ephemeral_manifest_patch,
@@ -121,7 +121,7 @@ def test_dev_version_formats_cover_every_known_feed() -> None:
 def test_npm_publish_rides_the_dev_dist_tag(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     manifest_path = write_manifest(tmp_path)
     recorder = CommandRecorder()
-    monkeypatch.setattr("pubpkg.feeds.bash_output", recorder)
+    monkeypatch.setattr("release_kit.feeds.bash_output", recorder)
 
     NpmFeed().publish(
         PublishRequest(
@@ -140,7 +140,7 @@ def test_npm_publish_rides_the_dev_dist_tag(tmp_path: Path, monkeypatch: pytest.
 def test_npm_publish_without_dist_tag_leaves_latest_alone(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     write_manifest(tmp_path)
     recorder = CommandRecorder()
-    monkeypatch.setattr("pubpkg.feeds.bash_output", recorder)
+    monkeypatch.setattr("release_kit.feeds.bash_output", recorder)
 
     NpmFeed().publish(
         PublishRequest(path=tmp_path, identity="org.outernet.placeframe", version="0.2.1", dependency_versions={})

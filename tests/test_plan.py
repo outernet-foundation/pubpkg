@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pubpkg import (
+from release_kit import (
     PackageConfig,
     compute_plan,
     next_version,
@@ -8,8 +8,8 @@ from pubpkg import (
     render_summary,
     resolved_dependency_versions,
 )
-from pubpkg.ledger import is_stable_version
-from pubpkg.plan import TagLedger
+from release_kit.ledger import is_stable_version
+from release_kit.plan import TagLedger
 
 
 def test_is_stable_version_rejects_prerelease_suffixes():
