@@ -10,7 +10,7 @@ import typer
 from bashrun import bash, bash_output
 from pydantic_settings import BaseSettings
 from docker_devkit.context_sha import compute_service_shas
-from unity_devkit.ci_step import ci_step
+from ci_devkit.ci_step import ci_step
 
 from .config import PublishConfig, load_config
 from .ledger import GitLedger

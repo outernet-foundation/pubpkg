@@ -7,7 +7,7 @@ from typing import Annotated
 import typer
 from bashrun import bash
 from docker_devkit.image_refs import collect_repo_references
-from unity_devkit.ci_step import ci_step
+from ci_devkit.ci_step import ci_step
 
 from .config import load_config
 

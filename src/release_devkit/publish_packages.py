@@ -5,8 +5,8 @@ from typing import Annotated
 
 import typer
 from pydantic_settings import BaseSettings
-from unity_devkit.ci_step import ci_step
-from unity_devkit.setup import configure_git, free_disk_space, install_dotnet, install_node
+from ci_devkit.ci_step import ci_step
+from ci_devkit.setup import configure_git, free_disk_space, install_dotnet, install_node
 
 from .config import load_config, select_packages
 from .feeds import PublishRequest, build_feeds

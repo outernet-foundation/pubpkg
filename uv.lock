@@ -51,6 +51,23 @@ wheels = [
 ]
 
 [[package]]
+name = "docker-devkit"
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "bashrun" },
+    { name = "pathspec" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "pyyaml" },
+    { name = "typer" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b3/e7/61a73757858424cb662449ed3f29f5ccf9695e6346bf530574b001b46af4/docker_devkit-0.1.0.tar.gz", hash = "sha256:c501b0403cfac41958405d87ff31e1eefeb2d4edbc75a6b045eef1814a4564fd", size = 40333, upload-time = "2026-09-21T22:16:40.867Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f7/92/a5522eab0f00cd85f7b23abf774f86883fc0ac7b1b4f1fa7cb677f0b1cdc/docker_devkit-0.1.0-py3-none-any.whl", hash = "sha256:df3755e8c2a0e9cb0714edb771364ef0a41fb5b6bdc82a96124ed63c09328f9f", size = 18149, upload-time = "2026-09-21T22:16:39.913Z" },
+]
+
+[[package]]
 name = "iniconfig"
 version = "2.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -279,16 +296,16 @@ wheels = [
 ]
 
 [[package]]
-name = "release-kit"
+name = "release-devkit"
 version = "0.0.0.dev0"
 source = { editable = "." }
 dependencies = [
     { name = "bashrun" },
+    { name = "docker-devkit" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
-    { name = "stack-toolkit" },
     { name = "typer" },
-    { name = "unity-buildkit" },
+    { name = "unity-devkit" },
 ]
 
 [package.dev-dependencies]
@@ -301,11 +318,11 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "bashrun", specifier = ">=0.1.0" },
+    { name = "docker-devkit", specifier = ">=0.1.0" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pydantic-settings", specifier = ">=2.9.1" },
-    { name = "stack-toolkit", specifier = ">=0.1.0" },
     { name = "typer", specifier = ">=0.17.4" },
-    { name = "unity-buildkit", specifier = ">=0.1.0" },
+    { name = "unity-devkit", specifier = ">=0.1.0" },
 ]
 
 [package.metadata.requires-dev]
@@ -363,23 +380,6 @@ wheels = [
 ]
 
 [[package]]
-name = "stack-toolkit"
-version = "0.1.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "bashrun" },
-    { name = "pathspec" },
-    { name = "pydantic" },
-    { name = "pydantic-settings" },
-    { name = "pyyaml" },
-    { name = "typer" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/62/46/e7649dd0ec7e5cdb3fc48019910171a161bb2cfce3da76331819787c0435/stack_toolkit-0.1.0.tar.gz", hash = "sha256:112f0dbbf09d99863e898518d7a6a4ad5d5cce29121d7ecbeba808407ff81325", size = 40160, upload-time = "2026-09-21T02:06:36.239Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/fd/06/b76e3094584e75298cae5d903da725d34cd0855f47ea695137b531e68abb/stack_toolkit-0.1.0-py3-none-any.whl", hash = "sha256:b8a821d525b9f20631fe7795fbaf28dd74e34259fd720b8fae0b6323c82566a0", size = 18156, upload-time = "2026-09-21T02:06:35.281Z" },
-]
-
-[[package]]
 name = "typer"
 version = "0.27.2"
 source = { registry = "https://pypi.org/simple" }
@@ -416,7 +416,7 @@ wheels = [
 ]
 
 [[package]]
-name = "unity-buildkit"
+name = "unity-devkit"
 version = "0.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
@@ -425,7 +425,7 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d9/b6/b1ac6f7ee9724ce540990f094d1bcab8d0704afce3377e72e13575d5f3b9/unity_buildkit-0.1.0.tar.gz", hash = "sha256:079962316f58acc5f8fcd49cf06e946d1a751b3751f35fe24f78c3645b58ceba", size = 49979, upload-time = "2026-09-21T02:07:29.701Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/6d/04/0a44e72ea2d4d9ecfacdaaadc45e3bf287c9b77232ff5a6a3f97d73a65f0/unity_devkit-0.1.0.tar.gz", hash = "sha256:5c0d607d7ff66216f037bf0276683cbda4d6b2553480761fbd175c9029fc8de0", size = 50144, upload-time = "2026-09-21T22:17:36.414Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bf/98/d63855e9671a48cfc94275bdd03422240878df0449a17f40a55255d5c706/unity_buildkit-0.1.0-py3-none-any.whl", hash = "sha256:ffaef44bf94445e467facb465def4b98e217dc0918d6c42be543de5f3efe91c4", size = 38946, upload-time = "2026-09-21T02:07:28.534Z" },
+    { url = "https://files.pythonhosted.org/packages/e4/f9/75c751b4a5e6ef485c912b456da3685ec80a47a08a69082d2912cda166db/unity_devkit-0.1.0-py3-none-any.whl", hash = "sha256:72f84a3560bf795f335634b8c67420d648c6df3fd2432d954dbb0c7104546a21", size = 38841, upload-time = "2026-09-21T22:17:35.41Z" },
 ]
