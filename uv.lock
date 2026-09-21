@@ -35,7 +35,11 @@ wheels = [
 [[package]]
 name = "bashrun"
 version = "0.1.0"
-source = { git = "https://github.com/outernet-foundation/bashrun.git?rev=0a9e9a466a3ef99c95e316a6f46842741d32ca11#0a9e9a466a3ef99c95e316a6f46842741d32ca11" }
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/24/cd/dc3df91cbe2bfbe57b6d9bfe225f5808a22888d636cf30005d89133237c8/bashrun-0.1.0.tar.gz", hash = "sha256:e376f34693ba12ec907a6ab43626ed425c876c2b7be6569563a6492e11c79bc7", size = 18983, upload-time = "2026-09-21T01:47:56.971Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/be/9a/749dd28f3defde3690e0280131f9461e4100c43c117f9363798f6dedbb91/bashrun-0.1.0-py3-none-any.whl", hash = "sha256:80f87924f88336460890d669aa1abb6fb8c389b675fdb41ac8d2b6861d4ebddb", size = 7634, upload-time = "2026-09-21T01:47:56.233Z" },
+]
 
 [[package]]
 name = "colorama"
@@ -121,13 +125,13 @@ wheels = [
 
 [[package]]
 name = "pubpkg"
-version = "0.1.0"
+version = "0.0.0.dev0"
 source = { editable = "." }
 dependencies = [
     { name = "bashrun" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
-    { name = "stack-lifecycle" },
+    { name = "stack-toolkit" },
     { name = "typer" },
     { name = "unity-buildkit" },
 ]
@@ -141,12 +145,12 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "bashrun", git = "https://github.com/outernet-foundation/bashrun.git?rev=0a9e9a466a3ef99c95e316a6f46842741d32ca11" },
+    { name = "bashrun", specifier = ">=0.1.0" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pydantic-settings", specifier = ">=2.9.1" },
-    { name = "stack-lifecycle", git = "https://github.com/outernet-foundation/stack-lifecycle.git?rev=da2c88cab0500b9aabaeaffb81429adde44fcced" },
+    { name = "stack-toolkit", specifier = ">=0.1.0" },
     { name = "typer", specifier = ">=0.17.4" },
-    { name = "unity-buildkit", git = "https://github.com/outernet-foundation/unity-buildkit.git?rev=df5997fd8b0fae3b1ce700b9edecd15b2b096f12" },
+    { name = "unity-buildkit", specifier = ">=0.1.0" },
 ]
 
 [package.metadata.requires-dev]
@@ -359,9 +363,9 @@ wheels = [
 ]
 
 [[package]]
-name = "stack-lifecycle"
+name = "stack-toolkit"
 version = "0.1.0"
-source = { git = "https://github.com/outernet-foundation/stack-lifecycle.git?rev=da2c88cab0500b9aabaeaffb81429adde44fcced#da2c88cab0500b9aabaeaffb81429adde44fcced" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "bashrun" },
     { name = "pathspec" },
@@ -369,6 +373,10 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "pyyaml" },
     { name = "typer" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/62/46/e7649dd0ec7e5cdb3fc48019910171a161bb2cfce3da76331819787c0435/stack_toolkit-0.1.0.tar.gz", hash = "sha256:112f0dbbf09d99863e898518d7a6a4ad5d5cce29121d7ecbeba808407ff81325", size = 40160, upload-time = "2026-09-21T02:06:36.239Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fd/06/b76e3094584e75298cae5d903da725d34cd0855f47ea695137b531e68abb/stack_toolkit-0.1.0-py3-none-any.whl", hash = "sha256:b8a821d525b9f20631fe7795fbaf28dd74e34259fd720b8fae0b6323c82566a0", size = 18156, upload-time = "2026-09-21T02:06:35.281Z" },
 ]
 
 [[package]]
@@ -410,10 +418,14 @@ wheels = [
 [[package]]
 name = "unity-buildkit"
 version = "0.1.0"
-source = { git = "https://github.com/outernet-foundation/unity-buildkit.git?rev=df5997fd8b0fae3b1ce700b9edecd15b2b096f12#df5997fd8b0fae3b1ce700b9edecd15b2b096f12" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "bashrun" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "typer" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d9/b6/b1ac6f7ee9724ce540990f094d1bcab8d0704afce3377e72e13575d5f3b9/unity_buildkit-0.1.0.tar.gz", hash = "sha256:079962316f58acc5f8fcd49cf06e946d1a751b3751f35fe24f78c3645b58ceba", size = 49979, upload-time = "2026-09-21T02:07:29.701Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bf/98/d63855e9671a48cfc94275bdd03422240878df0449a17f40a55255d5c706/unity_buildkit-0.1.0-py3-none-any.whl", hash = "sha256:ffaef44bf94445e467facb465def4b98e217dc0918d6c42be543de5f3efe91c4", size = 38946, upload-time = "2026-09-21T02:07:28.534Z" },
 ]

@@ -9,7 +9,7 @@ from typing import Annotated
 import typer
 from bashrun import bash, bash_output
 from pydantic_settings import BaseSettings
-from stack_lifecycle.context_sha import compute_service_shas
+from stack_toolkit.context_sha import compute_service_shas
 from unity_buildkit.ci_step import ci_step
 
 from .config import PublishConfig, load_config

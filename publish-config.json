@@ -1,0 +1,11 @@
+{
+  "packages": [
+    {
+      "name": "pubpkg",
+      "path": ".",
+      "feeds": { "pypi": "pubpkg" }
+    }
+  ],
+  "ci_workflow": "ci.yml",
+  "mirror_prefix": "ghcr.io/outernet-foundation/mirror"
+}
