@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from pathlib import Path
 
 from pydantic import BaseModel, Field, model_validator
@@ -62,3 +63,19 @@ class PublishConfig(BaseModel):
 
 def load_config(path: Path) -> PublishConfig:
     return PublishConfig.model_validate_json(path.read_text(encoding="utf-8"))
+
+
+def select_packages(packages: list[PackageConfig], only: Sequence[str], exclude: Sequence[str]) -> list[PackageConfig]:
+    if only and exclude:
+        raise SystemExit("--only and --exclude are mutually exclusive")
+    names = [package.name for package in packages]
+    for requested in [*only, *exclude]:
+        if requested not in names:
+            raise SystemExit(f"Unknown package '{requested}'. Valid: {', '.join(names)}")
+    if only:
+        selected = set(only)
+        return [package for package in packages if package.name in selected]
+    if exclude:
+        deselected = set(exclude)
+        return [package for package in packages if package.name not in deselected]
+    return packages

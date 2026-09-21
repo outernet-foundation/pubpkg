@@ -8,7 +8,7 @@ from pydantic_settings import BaseSettings
 from unity_buildkit.ci_step import ci_step
 from unity_buildkit.setup import configure_git, free_disk_space, install_dotnet, install_node
 
-from .config import load_config
+from .config import load_config, select_packages
 from .feeds import DEV_VERSION_FORMATS, NPM_DEV_DIST_TAG, PublishRequest, build_feeds
 from .ledger import GitLedger
 from .plan import compute_plan, render_dev_summary, resolved_dependency_versions
@@ -38,6 +38,8 @@ def main(
     run_id: Annotated[
         str, typer.Option(help="CI run id baked into every dev version (defaults to GITHUB_RUN_ID)")
     ] = "",
+    only: Annotated[list[str] | None, typer.Option(help="Restrict to named packages (repeatable).")] = None,
+    exclude: Annotated[list[str] | None, typer.Option(help="Skip named packages (repeatable).")] = None,
 ) -> None:
     settings = Settings.model_validate({})
     resolved_run_id = run_id or settings.github_run_id
@@ -45,12 +47,13 @@ def main(
         raise SystemExit("dev run id must be all digits: pass --run-id or set GITHUB_RUN_ID")
 
     publish_config = load_config(config)
+    packages = select_packages(publish_config.packages, only or [], exclude or [])
     ledger = GitLedger()
 
     with ci_step("Compute dev publish plan"):
         plans = compute_plan(publish_config.packages, ledger)
 
-        summary = render_dev_summary(publish_config.packages, plans, resolved_run_id)
+        summary = render_dev_summary(packages, plans, resolved_run_id)
         print(summary)
         _write_summary(settings.github_step_summary, summary)
 
@@ -70,7 +73,7 @@ def main(
 
     feeds = build_feeds(settings.nuget_api_key)
     published: list[tuple[str, str, str]] = []
-    for package in publish_config.packages:
+    for package in packages:
         plan = plans[package.name]
         if not plan.publish:
             continue

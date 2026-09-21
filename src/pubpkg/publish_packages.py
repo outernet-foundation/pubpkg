@@ -8,7 +8,7 @@ from pydantic_settings import BaseSettings
 from unity_buildkit.ci_step import ci_step
 from unity_buildkit.setup import configure_git, free_disk_space, install_dotnet, install_node
 
-from .config import load_config
+from .config import load_config, select_packages
 from .feeds import PublishRequest, build_feeds
 from .ledger import GitLedger
 from .plan import compute_plan, next_version, render_summary, resolved_dependency_versions
@@ -35,9 +35,13 @@ def _append_output(path: str | None, line: str) -> None:
 def main(
     config: Annotated[Path, typer.Option(help="Publish configuration JSON")] = DEFAULT_CONFIG_PATH,
     dry_run: Annotated[bool, typer.Option(help="Plan publishes without executing them")] = False,
+    only: Annotated[list[str] | None, typer.Option(help="Restrict to named packages (repeatable).")] = None,
+    exclude: Annotated[list[str] | None, typer.Option(help="Skip named packages (repeatable).")] = None,
+    with_apps: Annotated[bool, typer.Option(help="Handle app version bumps and tags in a filtered run.")] = False,
 ) -> None:
     settings = Settings.model_validate({})
     publish_config = load_config(config)
+    packages = select_packages(publish_config.packages, only or [], exclude or [])
     ledger = GitLedger()
 
     with ci_step("Compute publish plan"):
@@ -62,7 +66,7 @@ def main(
         install_node("24", "https://registry.npmjs.org")
 
     feeds = build_feeds(settings.nuget_api_key)
-    for package in publish_config.packages:
+    for package in packages:
         plan = plans[package.name]
         if not plan.publish:
             continue
@@ -78,8 +82,9 @@ def main(
                     )
                 )
 
+    handle_apps = (not only and not exclude) or with_apps
+    any_package_published = any(plans[package.name].publish for package in packages)
     app_versions: dict[str, str] = {}
-    any_package_published = any(plan.publish for plan in plans.values())
     with ci_step("Compute app versions"):
         for app_config in publish_config.apps:
             last_version = ledger.latest_version(f"{app_config.tag_prefix}-v")
@@ -97,17 +102,18 @@ def main(
                 print(f"  {app_config.name}: {last_version or '0.0.0'} (unchanged)")
 
     with ci_step("Create version tags"):
-        for package in publish_config.packages:
+        for package in packages:
             plan = plans[package.name]
             if plan.publish:
                 tag = f"{package.name}-v{plan.version}"
                 ledger.create_and_push_tag(tag)
                 print(f"  Tagged: {tag}")
 
-        for app_config in publish_config.apps:
-            if app_config.name in app_versions:
-                tag = f"{app_config.tag_prefix}-v{app_versions[app_config.name]}"
-                ledger.create_and_push_tag(tag)
-                print(f"  Tagged: {tag}")
+        if handle_apps:
+            for app_config in publish_config.apps:
+                if app_config.name in app_versions:
+                    tag = f"{app_config.tag_prefix}-v{app_versions[app_config.name]}"
+                    ledger.create_and_push_tag(tag)
+                    print(f"  Tagged: {tag}")
 
         _append_output(settings.github_output, "published=true")

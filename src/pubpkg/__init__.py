@@ -1,4 +1,4 @@
-from .config import AppConfig, PackageConfig, PublishConfig, load_config
+from .config import AppConfig, PackageConfig, PublishConfig, load_config, select_packages
 from .feeds import Feed, NuGetFeed, NpmFeed, PublishRequest, build_feeds, pep440_dev_version, semver_dev_version
 from .ledger import GitLedger
 from .plan import (
@@ -30,5 +30,6 @@ __all__ = [
     "render_dev_summary",
     "render_summary",
     "resolved_dependency_versions",
+    "select_packages",
     "semver_dev_version",
 ]
