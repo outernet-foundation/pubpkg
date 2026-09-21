@@ -6,8 +6,8 @@ from typing import Annotated
 
 import typer
 from bashrun import bash
-from stack_toolkit.image_refs import collect_repo_references
-from unity_buildkit.ci_step import ci_step
+from docker_devkit.image_refs import collect_repo_references
+from unity_devkit.ci_step import ci_step
 
 from .config import load_config
 

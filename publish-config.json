@@ -1,9 +1,9 @@
 {
   "packages": [
     {
-      "name": "release-kit",
+      "name": "release-devkit",
       "path": ".",
-      "feeds": { "pypi": "release-kit" }
+      "feeds": { "pypi": "release-devkit" }
     }
   ],
   "ci_workflow": "ci.yml",

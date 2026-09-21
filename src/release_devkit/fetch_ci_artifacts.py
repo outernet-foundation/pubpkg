@@ -7,7 +7,7 @@ from typing import Annotated
 import typer
 from bashrun import bash, bash_output
 from pydantic_settings import BaseSettings
-from unity_buildkit.ci_step import ci_step
+from unity_devkit.ci_step import ci_step
 
 from .config import load_config
 

@@ -1,12 +1,12 @@
 [project]
-name = "release-kit"
+name = "release-devkit"
 version = "0.0.0.dev0"
 description = "Publication machinery: per-package tag ledger, path-diff change detection, ephemeral version patching, and per-registry feed adapters (nuget, npm/UPM) driven by a declarative consumer-owned config"
 requires-python = ">=3.13"
 dependencies = [
     "bashrun>=0.1.0",
-    "stack-toolkit>=0.1.0",
-    "unity-buildkit>=0.1.0",
+    "docker-devkit>=0.1.0",
+    "unity-devkit>=0.1.0",
     "pydantic>=2.11.7",
     "pydantic-settings>=2.9.1",
     "typer>=0.17.4",
@@ -20,17 +20,17 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project.scripts]
-create-release = "release_kit.create_release:app"
-ensure-release-pr = "release_kit.ensure_release_pr:app"
-fetch-ci-artifacts = "release_kit.fetch_ci_artifacts:app"
-mirror-images = "release_kit.mirror_images:app"
-publish-dev = "release_kit.publish_dev:app"
-publish-packages = "release_kit.publish_packages:app"
+create-release = "release_devkit.create_release:app"
+ensure-release-pr = "release_devkit.ensure_release_pr:app"
+fetch-ci-artifacts = "release_devkit.fetch_ci_artifacts:app"
+mirror-images = "release_devkit.mirror_images:app"
+publish-dev = "release_devkit.publish_dev:app"
+publish-packages = "release_devkit.publish_packages:app"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/release_kit"]
+packages = ["src/release_devkit"]
 include = [
-    "src/release_kit/py.typed",
+    "src/release_devkit/py.typed",
 ]
 
 [tool.basedpyright]

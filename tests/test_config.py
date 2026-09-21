@@ -4,8 +4,8 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-import release_kit
-from release_kit import load_config, select_packages
+import release_devkit
+from release_devkit import load_config, select_packages
 
 
 def write_config(tmp_path: Path, payload: dict[str, object]) -> Path:
@@ -126,11 +126,11 @@ def test_load_config_rejects_unknown_dependency_pin(tmp_path: Path):
         load_config(write_config(tmp_path, payload_with_unknown_pin()))
 
 
-def package_names(packages: list[release_kit.PackageConfig]) -> list[str]:
+def package_names(packages: list[release_devkit.PackageConfig]) -> list[str]:
     return [package.name for package in packages]
 
 
-def loaded_packages(tmp_path: Path) -> list[release_kit.PackageConfig]:
+def loaded_packages(tmp_path: Path) -> list[release_devkit.PackageConfig]:
     return load_config(write_config(tmp_path, base_payload())).packages
 
 
