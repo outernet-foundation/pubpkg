@@ -1,4 +1,4 @@
-# release-kit
+# release-devkit
 
 Publication machinery for multi-feed package releases: a per-package git-tag ledger, path-diff change detection, ephemeral version patching, per-registry feed adapters (nuget, npm/UPM, PyPI), release orchestration, and an OCI mirror scan — all driven by a declarative, consumer-owned config.
 
@@ -11,10 +11,10 @@ Every consuming repo keeps only a `publish-config.json` (package identities, pat
 
 ## Consuming from another repo
 
-Install nothing — release-kit is consumed **uvx-isolated** (it is a project dependency of nothing: the tool repos it publishes sit inside its own dependency graph, where a project-level release-kit edge is a resolver cycle). Pin the exact version in the workflow:
+Install nothing — release-devkit is consumed **uvx-isolated** (it is a project dependency of nothing: the tool repos it publishes sit inside its own dependency graph, where a project-level release-devkit edge is a resolver cycle). Pin the exact version in the workflow:
 
 ```bash
-uvx --from release-kit==0.1.0 publish-packages --config build/publish-config.json
+uvx --from release-devkit==0.1.0 publish-packages --config build/publish-config.json
 ```
 
 Then author `build/publish-config.json`:
@@ -42,9 +42,9 @@ Then author `build/publish-config.json`:
 and invoke from CI:
 
 ```bash
-uvx --from release-kit==0.1.0 publish-packages --config build/publish-config.json
-uvx --from release-kit==0.1.0 publish-dev --config build/publish-config.json --run-id ${{ github.event.workflow_run.id }}
-uvx --from release-kit==0.1.0 create-release --config build/publish-config.json
+uvx --from release-devkit==0.1.0 publish-packages --config build/publish-config.json
+uvx --from release-devkit==0.1.0 publish-dev --config build/publish-config.json --run-id ${{ github.event.workflow_run.id }}
+uvx --from release-devkit==0.1.0 create-release --config build/publish-config.json
 ```
 
 `publish-dev` is the dev-channel job: it publishes immutable `-dev.<run-id>` prereleases (`X.Y.Z.dev<run-id>` on PyPI) of every changed package on a green push — no git tags, npm `latest` untouched — and prints the exact versions to pin.
