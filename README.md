@@ -11,7 +11,21 @@ Every consuming repo keeps only a `publish-config.json` (package identities, pat
 
 ## Consuming from another repo
 
-Install nothing — release-devkit is consumed **uvx-isolated** (it is a project dependency of nothing: the tool repos it publishes sit inside its own dependency graph, where a project-level release-devkit edge is a resolver cycle). Pin the exact version in the workflow:
+Install nothing — release-devkit is consumed **uvx-isolated** (it is a project dependency of nothing: the tool repos it publishes sit inside its own dependency graph, where a project-level release-devkit edge is a resolver cycle). Publish jobs consume the composite action shipped here, pinned to a pushed SHA:
+
+```yaml
+jobs:
+  publish:
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: outernet-foundation/release-devkit/.github/actions/publish@<pushed-sha>
+```
+
+The action runs the uvx invocation inside the caller's job (fetch-tags workaround, uv setup, `uvx --from release-devkit==0.1.3 publish-packages`), so the OIDC trusted-publishing identity stays the caller's own workflow — PyPI hard-blocks reusable-workflow publishers, which is why publication ships as a composite action rather than a reusable workflow. Its `config` input overrides the config path (default `publish-config.json`). Direct uvx remains the shape for anything outside a publish job:
 
 ```bash
 uvx --from release-devkit==0.1.0 publish-packages --config build/publish-config.json
