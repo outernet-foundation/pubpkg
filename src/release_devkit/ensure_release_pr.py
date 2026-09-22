@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import typer
-from bashrun import bash_output
+from bashrun.bash import bash_output
 
 app = typer.Typer(add_completion=False, pretty_exceptions_show_locals=False)
 

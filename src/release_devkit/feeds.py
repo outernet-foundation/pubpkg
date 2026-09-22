@@ -7,7 +7,7 @@ from pathlib import Path
 from subprocess import CalledProcessError
 from typing import Protocol
 
-from bashrun import bash, bash_output
+from bashrun.bash import bash, bash_output
 
 NUGET_SOURCE = "https://api.nuget.org/v3/index.json"
 PYPI_SIMPLE_INDEX = "https://pypi.org/simple/"

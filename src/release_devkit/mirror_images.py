@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
-from bashrun import bash
+from bashrun.bash import bash
 from docker_devkit.image_refs import collect_repo_references
 from ci_devkit.ci_step import ci_step
 

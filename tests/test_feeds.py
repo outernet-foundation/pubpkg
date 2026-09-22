@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from release_devkit import NpmFeed, PublishRequest
+from release_devkit.feeds import NpmFeed, PublishRequest
 from release_devkit.feeds import (
     DEV_VERSION_FORMATS,
     KNOWN_FEEDS,
