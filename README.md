@@ -28,13 +28,13 @@ jobs:
       - uses: astral-sh/setup-uv@v7
 
       - name: Publish
-        run: uvx --from release-devkit==0.1.3 publish-packages --config publish-config.json
+        run: uvx --from release-devkit==0.1.8 publish-stable --config publish-config.json
 ```
 
 The uvx invocation runs inside the caller's job, so the OIDC trusted-publishing identity stays the caller's own workflow — PyPI hard-blocks reusable-workflow publishers, which is why the call inlines in the caller's workflow rather than riding a reusable workflow. Direct uvx is the same shape anywhere else:
 
 ```bash
-uvx --from release-devkit==0.1.0 publish-packages --config build/publish-config.json
+uvx --from release-devkit==0.1.8 publish-stable --config build/publish-config.json
 ```
 
 Then author `build/publish-config.json`:
@@ -62,9 +62,9 @@ Then author `build/publish-config.json`:
 and invoke from CI:
 
 ```bash
-uvx --from release-devkit==0.1.0 publish-packages --config build/publish-config.json
-uvx --from release-devkit==0.1.0 publish-dev --config build/publish-config.json --run-id ${{ github.event.workflow_run.id }}
-uvx --from release-devkit==0.1.0 create-release --config build/publish-config.json
+uvx --from release-devkit==0.1.8 publish-stable --config build/publish-config.json
+uvx --from release-devkit==0.1.8 publish-dev --config build/publish-config.json --run-id ${{ github.event.workflow_run.id }}
+uvx --from release-devkit==0.1.8 create-release --config build/publish-config.json
 ```
 
 `publish-dev` is the dev-channel job: it publishes immutable `-dev.<run-id>` prereleases (`X.Y.Z.dev<run-id>` on PyPI) of every changed package on a green push — no git tags, npm `latest` untouched — and prints the exact versions to pin.

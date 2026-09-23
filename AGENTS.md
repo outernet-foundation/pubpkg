@@ -10,7 +10,7 @@ The package is `release-devkit` (src-layout under `src/release_devkit/`; import 
 
 ## Self-publication
 
-release-devkit publishes itself from its own checkout: `release.yml` — triggered by a successful CI run on a `main` push — runs `uv run publish-packages --config publish-config.json`; the repo *is* release-devkit, so no uvx bootstrap and no self-reference. Its dependencies must all exist on PyPI before it publishes (leaves-first ordering: docker-devkit and unity-devkit publish before release-devkit repins to them). The committed `pyproject.toml` version is permanently the `0.0.0.dev0` sentinel; the `release-devkit-v*` tags are the version ledger. API-breaking changes ship with a manually bumped version — patch-auto assumes additive changes.
+release-devkit publishes itself from its own checkout: `release.yml` — triggered by a successful CI run on a `main` push — runs `uv run publish-stable --config publish-config.json`; the repo *is* release-devkit, so no uvx bootstrap and no self-reference. Its dependencies must all exist on PyPI before it publishes (leaves-first ordering: docker-devkit and unity-devkit publish before release-devkit repins to them). The committed `pyproject.toml` version is permanently the `0.0.0.dev0` sentinel; the `release-devkit-v*` tags are the version ledger. API-breaking changes ship with a manually bumped version — patch-auto assumes additive changes.
 
 ## Commands
 
@@ -18,7 +18,7 @@ All are `uv run <name> --config <path>` from the consuming repo's root (config d
 
 | Command | Role |
 |---|---|
-| `publish-packages` | Compute the publish plan from the tag ledger + path-diff, publish every changed package to its feeds, bump and tag app versions, push per-package tags. `--dry-run` prints the plan only. |
+| `publish-stable` | Compute the publish plan from the tag ledger + path-diff, publish every changed package to its feeds, bump and tag app versions, push per-package tags. `--dry-run` prints the plan only. |
 | `publish-dev` | Dev-channel mode: publish immutable `-dev.<run-id>` prereleases of every path-diff-changed package to its feeds. `--run-id` defaults to `GITHUB_RUN_ID`; never creates git tags, never touches app versions. |
 | `create-release` | Assemble release notes (service SHAs from the configured compose files, package versions with registry links, app versions), package CI artifacts, and cut the dated GitHub Release. |
 | `ensure-release-pr` | Maintain the standing `dev` → `main` "Next release" gate PR. |
