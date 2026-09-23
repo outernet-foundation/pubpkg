@@ -11,7 +11,7 @@ Every consuming repo keeps only a `publish-config.json` (package identities, pat
 
 ## Consuming from another repo
 
-Install nothing — release-devkit is consumed **uvx-isolated** (it is a project dependency of nothing: the tool repos it publishes sit inside its own dependency graph, where a project-level release-devkit edge is a resolver cycle). Publish jobs consume the composite action shipped here, pinned to a pushed SHA:
+Install nothing — release-devkit is consumed **uvx-isolated** (it is a project dependency of nothing: the tool repos it publishes sit inside its own dependency graph, where a project-level release-devkit edge is a resolver cycle). Publish jobs inline the invocation as plain steps in the caller's workflow:
 
 ```yaml
 jobs:
@@ -22,10 +22,16 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: outernet-foundation/release-devkit/.github/actions/publish@<pushed-sha>
+      # Workaround: fetch-tags is broken with shallow clones
+      - run: git fetch --tags origin
+
+      - uses: astral-sh/setup-uv@v7
+
+      - name: Publish
+        run: uvx --from release-devkit==0.1.3 publish-packages --config publish-config.json
 ```
 
-The action runs the uvx invocation inside the caller's job (fetch-tags workaround, uv setup, `uvx --from release-devkit==0.1.3 publish-packages`), so the OIDC trusted-publishing identity stays the caller's own workflow — PyPI hard-blocks reusable-workflow publishers, which is why publication ships as a composite action rather than a reusable workflow. Its `config` input overrides the config path (default `publish-config.json`). Direct uvx remains the shape for anything outside a publish job:
+The uvx invocation runs inside the caller's job, so the OIDC trusted-publishing identity stays the caller's own workflow — PyPI hard-blocks reusable-workflow publishers, which is why the call inlines in the caller's workflow rather than riding a reusable workflow. Direct uvx is the same shape anywhere else:
 
 ```bash
 uvx --from release-devkit==0.1.0 publish-packages --config build/publish-config.json
