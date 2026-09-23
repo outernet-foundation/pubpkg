@@ -17,7 +17,7 @@ from release_devkit.plan import (
 def test_latest_version_skips_prerelease_tags(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "release_devkit.ledger.list_tag_versions",
-        lambda _prefix: ["1.0.6-preview", "1.0.5", "0.1.0-dev.1234", "0.1.0", "v1.0.5"],
+        preview_and_stable_tags,
     )
 
     assert GitLedger().latest_version("pkg-v") == "1.0.5"
@@ -26,10 +26,18 @@ def test_latest_version_skips_prerelease_tags(monkeypatch: pytest.MonkeyPatch) -
 def test_latest_version_returns_none_when_no_stable_tag(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "release_devkit.ledger.list_tag_versions",
-        lambda _prefix: ["1.0.6-preview", "0.1.0-dev.1234"],
+        prerelease_only_tags,
     )
 
     assert GitLedger().latest_version("pkg-v") is None
+
+
+def preview_and_stable_tags(_prefix: str) -> list[str]:
+    return ["1.0.6-preview", "1.0.5", "0.1.0-dev.1234", "0.1.0", "v1.0.5"]
+
+
+def prerelease_only_tags(_prefix: str) -> list[str]:
+    return ["1.0.6-preview", "0.1.0-dev.1234"]
 
 
 class FakeLedger:
