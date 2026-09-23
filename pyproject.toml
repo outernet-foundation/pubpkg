@@ -25,7 +25,7 @@ ensure-release-pr = "release_devkit.ensure_release_pr:app"
 fetch-ci-artifacts = "release_devkit.fetch_ci_artifacts:app"
 mirror-images = "release_devkit.mirror_images:app"
 publish-dev = "release_devkit.publish_dev:app"
-publish-packages = "release_devkit.publish_packages:app"
+publish-stable = "release_devkit.publish_stable:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/release_devkit"]
