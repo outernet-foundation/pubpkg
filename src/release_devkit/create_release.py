@@ -23,6 +23,55 @@ class Settings(BaseSettings):
     github_repository: str
 
 
+@app.command()
+def main(config: Annotated[Path, typer.Option(help="Publish configuration JSON")]) -> None:
+    settings = Settings.model_validate({})
+    publish_config = load_config(config)
+    tag = _next_release_tag(settings.github_repository)
+
+    with ci_step("Compute service SHAs"):
+        service_shas: dict[str, str] = {}
+        for compose_file in publish_config.compose_files:
+            service_shas.update(compute_service_shas(Path.cwd(), Path(compose_file)))
+        for var, sha in sorted(service_shas.items()):
+            print(f"  {var}={sha}")
+
+    with ci_step("Package artifacts"):
+        assets = _package_artifacts(publish_config)
+        if assets:
+            print(f"  {len(assets)} asset(s) ready for upload")
+        else:
+            print("  No build artifacts to attach")
+
+    with ci_step("Create GitHub Release"):
+        owner, repository = settings.github_repository.split("/", maxsplit=1)
+        ghcr_url = f"https://github.com/orgs/{owner}/packages?repo_name={repository}"
+        notes = _build_release_notes(publish_config, service_shas, ghcr_url)
+        print(notes)
+
+        asset_args = " ".join(f'"{a}"' for a in assets)
+        with NamedTemporaryFile(mode="w", suffix=".md", delete=False, encoding="utf-8") as file:
+            file.write(notes)
+            notes_path = file.name
+        bash(
+            f"gh release create {tag} --title {tag}"
+            f" --notes-file {notes_path}"
+            f" --repo {settings.github_repository}"
+            f" {asset_args}"
+        )
+        Path(notes_path).unlink()
+        print(f"  Release created: {tag}")
+
+
+def _next_release_tag(repo: str) -> str:
+    today = datetime.now(UTC).strftime("%Y-%m-%d")
+    existing = bash_output(
+        f"gh release list --repo {repo} --json tagName --jq '[.[].tagName] | map(select(startswith(\"{today}\"))) | length'"
+    ).strip()
+    count = int(existing) if existing else 0
+    return f"{today}.{count + 1}" if count > 0 else today
+
+
 def _package_artifacts(config: PublishConfig) -> list[Path]:
     artifact_dir = config.artifact_dir
     assets: list[Path] = []
@@ -114,52 +163,3 @@ def _build_release_notes(config: PublishConfig, service_shas: dict[str, str], gh
 
     lines.append("")
     return "\n".join(lines)
-
-
-def _next_release_tag(repo: str) -> str:
-    today = datetime.now(UTC).strftime("%Y-%m-%d")
-    existing = bash_output(
-        f"gh release list --repo {repo} --json tagName --jq '[.[].tagName] | map(select(startswith(\"{today}\"))) | length'"
-    ).strip()
-    count = int(existing) if existing else 0
-    return f"{today}.{count + 1}" if count > 0 else today
-
-
-@app.command()
-def main(config: Annotated[Path, typer.Option(help="Publish configuration JSON")]) -> None:
-    settings = Settings.model_validate({})
-    publish_config = load_config(config)
-    tag = _next_release_tag(settings.github_repository)
-
-    with ci_step("Compute service SHAs"):
-        service_shas: dict[str, str] = {}
-        for compose_file in publish_config.compose_files:
-            service_shas.update(compute_service_shas(Path.cwd(), Path(compose_file)))
-        for var, sha in sorted(service_shas.items()):
-            print(f"  {var}={sha}")
-
-    with ci_step("Package artifacts"):
-        assets = _package_artifacts(publish_config)
-        if assets:
-            print(f"  {len(assets)} asset(s) ready for upload")
-        else:
-            print("  No build artifacts to attach")
-
-    with ci_step("Create GitHub Release"):
-        owner, repository = settings.github_repository.split("/", maxsplit=1)
-        ghcr_url = f"https://github.com/orgs/{owner}/packages?repo_name={repository}"
-        notes = _build_release_notes(publish_config, service_shas, ghcr_url)
-        print(notes)
-
-        asset_args = " ".join(f'"{a}"' for a in assets)
-        with NamedTemporaryFile(mode="w", suffix=".md", delete=False, encoding="utf-8") as file:
-            file.write(notes)
-            notes_path = file.name
-        bash(
-            f"gh release create {tag} --title {tag}"
-            f" --notes-file {notes_path}"
-            f" --repo {settings.github_repository}"
-            f" {asset_args}"
-        )
-        Path(notes_path).unlink()
-        print(f"  Release created: {tag}")

@@ -11,6 +11,7 @@ from ci_devkit.setup import configure_git, free_disk_space, install_dotnet, inst
 from .config import load_config, select_packages
 from .feeds import DEV_VERSION_FORMATS, NPM_DEV_DIST_TAG, PublishRequest, build_feeds
 from .ledger import GitLedger
+from .outputs import append_line
 from .plan import compute_plan, render_dev_summary, resolved_dependency_versions
 
 app = typer.Typer(add_completion=False, pretty_exceptions_show_locals=False)
@@ -23,12 +24,6 @@ class Settings(BaseSettings):
     github_step_summary: str | None = None
     github_run_id: str = ""
     nuget_api_key: str = ""
-
-
-def _write_summary(path: str | None, text: str) -> None:
-    if path:
-        with Path(path).open("a", encoding="utf-8") as file:
-            file.write(text + "\n")
 
 
 @app.command()
@@ -55,7 +50,7 @@ def main(
 
         summary = render_dev_summary(packages, plans, resolved_run_id)
         print(summary)
-        _write_summary(settings.github_step_summary, summary)
+        append_line(settings.github_step_summary, summary)
 
         if not any(plan.publish for plan in plans.values()):
             print("Nothing to publish")
@@ -101,4 +96,4 @@ def main(
     ])
     print(recap)
     print("Consume these by exact version pin - there is no discovery tooling by design")
-    _write_summary(settings.github_step_summary, recap)
+    append_line(settings.github_step_summary, recap)

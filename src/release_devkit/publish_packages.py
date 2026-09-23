@@ -11,6 +11,7 @@ from ci_devkit.setup import configure_git, free_disk_space, install_dotnet, inst
 from .config import load_config, select_packages
 from .feeds import PublishRequest, build_feeds
 from .ledger import GitLedger
+from .outputs import append_line
 from .plan import compute_plan, next_version, render_summary, resolved_dependency_versions
 
 app = typer.Typer(add_completion=False, pretty_exceptions_show_locals=False)
@@ -23,12 +24,6 @@ class Settings(BaseSettings):
     github_step_summary: str | None = None
     github_output: str | None = None
     nuget_api_key: str = ""
-
-
-def _append_output(path: str | None, line: str) -> None:
-    if path:
-        with Path(path).open("a", encoding="utf-8") as file:
-            file.write(line + "\n")
 
 
 @app.command()
@@ -49,7 +44,7 @@ def main(
 
         summary = render_summary(plans)
         print(summary)
-        _append_output(settings.github_step_summary, summary)
+        append_line(settings.github_step_summary, summary)
 
         if not any(plan.publish for plan in plans.values()):
             print("Nothing to publish")
@@ -116,4 +111,4 @@ def main(
                     ledger.create_and_push_tag(tag)
                     print(f"  Tagged: {tag}")
 
-        _append_output(settings.github_output, "published=true")
+        append_line(settings.github_output, "published=true")

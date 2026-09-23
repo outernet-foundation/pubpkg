@@ -23,13 +23,6 @@ class PackagePlan:
     last_version: str | None
 
 
-def next_version(last_version: str | None) -> str:
-    if last_version is None:
-        return FIRST_VERSION
-    major, minor, patch = last_version.split(".")
-    return f"{major}.{minor}.{int(patch) + 1}"
-
-
 def compute_plan(packages: list[PackageConfig], ledger: TagLedger) -> dict[str, PackagePlan]:
     plans: dict[str, PackagePlan] = {}
     for package in packages:
@@ -44,6 +37,13 @@ def compute_plan(packages: list[PackageConfig], ledger: TagLedger) -> dict[str, 
             last_version=last_version,
         )
     return plans
+
+
+def next_version(last_version: str | None) -> str:
+    if last_version is None:
+        return FIRST_VERSION
+    major, minor, patch = last_version.split(".")
+    return f"{major}.{minor}.{int(patch) + 1}"
 
 
 def resolved_dependency_versions(package: PackageConfig, plans: dict[str, PackagePlan]) -> dict[str, str]:
