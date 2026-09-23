@@ -15,7 +15,7 @@ STABLE_VERSION_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
 class GitLedger:
     def latest_version(self, prefix: str) -> str | None:
         for version in list_tag_versions(prefix):
-            if is_stable_version(version):
+            if STABLE_VERSION_PATTERN.fullmatch(version):
                 return version
         return None
 
@@ -24,7 +24,3 @@ class GitLedger:
 
     def create_and_push_tag(self, tag: str) -> None:
         push_tag(tag)
-
-
-def is_stable_version(version: str) -> bool:
-    return STABLE_VERSION_PATTERN.fullmatch(version) is not None

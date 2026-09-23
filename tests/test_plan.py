@@ -1,7 +1,9 @@
 from pathlib import Path
 
+import pytest
+
 from release_devkit.config import PackageConfig
-from release_devkit.ledger import is_stable_version
+from release_devkit.ledger import GitLedger
 from release_devkit.plan import (
     TagLedger,
     compute_plan,
@@ -12,12 +14,22 @@ from release_devkit.plan import (
 )
 
 
-def test_is_stable_version_rejects_prerelease_suffixes():
-    assert is_stable_version("1.0.5")
-    assert is_stable_version("0.1.0")
-    assert not is_stable_version("1.0.6-preview")
-    assert not is_stable_version("0.1.0-dev.1234")
-    assert not is_stable_version("v1.0.5")
+def test_latest_version_skips_prerelease_tags(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "release_devkit.ledger.list_tag_versions",
+        lambda _prefix: ["1.0.6-preview", "1.0.5", "0.1.0-dev.1234", "0.1.0", "v1.0.5"],
+    )
+
+    assert GitLedger().latest_version("pkg-v") == "1.0.5"
+
+
+def test_latest_version_returns_none_when_no_stable_tag(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "release_devkit.ledger.list_tag_versions",
+        lambda _prefix: ["1.0.6-preview", "0.1.0-dev.1234"],
+    )
+
+    assert GitLedger().latest_version("pkg-v") is None
 
 
 class FakeLedger:
