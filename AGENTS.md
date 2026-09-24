@@ -20,7 +20,7 @@ All are `uv run <name> --config <path>` from the consuming repo's root (config d
 |---|---|
 | `publish-stable` | Compute the publish plan from the tag ledger + path-diff, publish every changed package to its feeds, bump and tag app versions, push per-package tags. `--dry-run` prints the plan only. |
 | `publish-dev` | Dev-channel mode: publish immutable `-dev.<run-id>` prereleases of every path-diff-changed package to its feeds. `--run-id` defaults to `GITHUB_RUN_ID`; never creates git tags, never touches app versions. |
-| `create-release` | Assemble release notes (service SHAs from the configured compose files, package versions with registry links, app versions), package CI artifacts, and cut the dated GitHub Release. |
+| `create-release` | Assemble release notes (service SHAs from the configured compose files, package versions with registry links, app versions), package CI artifacts, and cut the CalVer-named (`YYYY.MM.N`, counting releases within the month) GitHub Release. Runs only when something published — consumer workflows gate the step on `publish-stable`'s `published` output. |
 | `ensure-release-pr` | Maintain the standing `dev` → `main` "Next release" gate PR. |
 | `fetch-ci-artifacts` | Locate the successful CI run for the release SHA (via the merge commit's second parent) and download its artifacts, pruning non-release ones per the config's skip rules. |
 | `mirror-images` | Populate the org-level ghcr mirror namespace with every mirror-prefixed image reference the repo scan finds, via `crane copy`. |
