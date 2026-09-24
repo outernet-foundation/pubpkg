@@ -118,6 +118,19 @@ def test_load_config_parses_packages(tmp_path: Path):
     assert config.artifact_dir == Path("/tmp/release-artifacts")
 
 
+def test_load_config_defaults_empty_collections(tmp_path: Path):
+    payload: dict[str, object] = {
+        "ci_workflow": "my-ci.yml",
+        "mirror_prefix": "ghcr.io/my-org/mirror",
+    }
+
+    config = load_config(write_config(tmp_path, payload))
+
+    assert config.packages == []
+    assert config.apps == []
+    assert config.compose_files == []
+
+
 def test_load_config_rejects_unknown_dependency(tmp_path: Path):
     with pytest.raises(ValidationError, match="unknown package 'nonexistent'"):
         load_config(write_config(tmp_path, payload_with_unknown_dependency()))

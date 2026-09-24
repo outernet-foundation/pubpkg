@@ -38,6 +38,7 @@ def main(
     publish_config = load_config(config)
     packages = select_packages(publish_config.packages, only or [], exclude or [])
     ledger = GitLedger()
+    handle_apps = (not only and not exclude) or with_apps
 
     with ci_step("Compute publish plan"):
         plans = compute_plan(publish_config.packages, ledger)
@@ -46,55 +47,57 @@ def main(
         print(summary)
         append_line(settings.github_step_summary, summary)
 
-        if not any(plan.publish for plan in plans.values()):
-            print("Nothing to publish")
-            return
+    any_package_published = any(plans[package.name].publish for package in packages)
+    app_versions: dict[str, str] = {}
+    if handle_apps:
+        with ci_step("Compute app versions"):
+            for app_config in publish_config.apps:
+                prefix = f"{app_config.tag_prefix}-v"
+                last_version = ledger.latest_version(prefix)
+                last_in_line = ledger.latest_version_in_line(prefix, app_config.major_minor)
+                changed = ledger.has_changes_since(f"{prefix}{last_version}" if last_version else None, app_config.path)
+                # Apps depend on packages — bump if any package changed
+                if any_package_published:
+                    changed = True
+                if changed:
+                    new_version = next_version(app_config.major_minor, last_in_line, last_version, app_config.name)
+                    app_versions[app_config.name] = new_version
+                    print(f"  {app_config.name}: {last_version or '(none)'} -> {new_version}")
+                else:
+                    print(f"  {app_config.name}: {last_version or '0.0.0'} (unchanged)")
 
-        if dry_run:
-            print("Dry run — skipping publish")
-            return
+    if not any_package_published and not app_versions:
+        print("Nothing to publish")
+        return
+
+    if dry_run:
+        print("Dry run — skipping publish")
+        return
 
     with ci_step("Setup"):
         configure_git(settings.github_workspace)
-        free_disk_space()
-        install_dotnet("8.0")
-        install_node("24", "https://registry.npmjs.org")
+        if packages:
+            free_disk_space()
+            install_dotnet("8.0")
+            install_node("24", "https://registry.npmjs.org")
 
-    feeds = build_feeds(settings.nuget_api_key)
-    for package in packages:
-        plan = plans[package.name]
-        if not plan.publish:
-            continue
-        dependency_versions = resolved_dependency_versions(package, plans)
-        for feed_name, identity in package.feeds.items():
-            with ci_step(f"Publish {feed_name} ({package.name})"):
-                feeds[feed_name].publish(
-                    PublishRequest(
-                        path=package.path,
-                        identity=identity,
-                        version=plan.version,
-                        dependency_versions=dependency_versions,
+    if packages:
+        feeds = build_feeds(settings.nuget_api_key)
+        for package in packages:
+            plan = plans[package.name]
+            if not plan.publish:
+                continue
+            dependency_versions = resolved_dependency_versions(package, plans)
+            for feed_name, identity in package.feeds.items():
+                with ci_step(f"Publish {feed_name} ({package.name})"):
+                    feeds[feed_name].publish(
+                        PublishRequest(
+                            path=package.path,
+                            identity=identity,
+                            version=plan.version,
+                            dependency_versions=dependency_versions,
+                        )
                     )
-                )
-
-    handle_apps = (not only and not exclude) or with_apps
-    any_package_published = any(plans[package.name].publish for package in packages)
-    app_versions: dict[str, str] = {}
-    with ci_step("Compute app versions"):
-        for app_config in publish_config.apps:
-            prefix = f"{app_config.tag_prefix}-v"
-            last_version = ledger.latest_version(prefix)
-            last_in_line = ledger.latest_version_in_line(prefix, app_config.major_minor)
-            changed = ledger.has_changes_since(f"{prefix}{last_version}" if last_version else None, app_config.path)
-            # Apps depend on packages — bump if any package changed
-            if any_package_published:
-                changed = True
-            if changed:
-                new_version = next_version(app_config.major_minor, last_in_line, last_version, app_config.name)
-                app_versions[app_config.name] = new_version
-                print(f"  {app_config.name}: {last_version or '(none)'} -> {new_version}")
-            else:
-                print(f"  {app_config.name}: {last_version or '0.0.0'} (unchanged)")
 
     with ci_step("Create version tags"):
         for package in packages:

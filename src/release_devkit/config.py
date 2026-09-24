@@ -24,7 +24,7 @@ class AppConfig(BaseModel):
 
 
 class PublishConfig(BaseModel):
-    packages: list[PackageConfig]
+    packages: list[PackageConfig] = Field(default_factory=list)
     apps: list[AppConfig] = Field(default_factory=list)
     compose_files: list[str] = Field(default_factory=list)
     ci_workflow: str
