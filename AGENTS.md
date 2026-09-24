@@ -10,7 +10,7 @@ The package is `release-devkit` (src-layout under `src/release_devkit/`; import 
 
 ## Self-publication
 
-release-devkit publishes itself from its own checkout: `release.yml` — triggered by a successful CI run on a `main` push — runs `uv run publish-stable --config publish-config.json`; the repo *is* release-devkit, so no uvx bootstrap and no self-reference. Its dependencies must all exist on PyPI before it publishes (leaves-first ordering: docker-devkit and unity-devkit publish before release-devkit repins to them). The committed `pyproject.toml` version is permanently the `0.0.0.dev0` sentinel; the `release-devkit-v*` tags are the version ledger. API-breaking changes ship with a manually bumped version — patch-auto assumes additive changes.
+release-devkit publishes itself from its own checkout: `release.yml` — triggered by a successful CI run on a `main` push — runs `uv run publish-stable --config publish-config.json`; the repo *is* release-devkit, so no uvx bootstrap and no self-reference. Its dependencies must all exist on PyPI before it publishes (leaves-first ordering: docker-devkit and unity-devkit publish before release-devkit repins to them). The committed `pyproject.toml` version is permanently the `0.0.0.dev0` sentinel; the `release-devkit-v*` tags are the version ledger. API-breaking changes ship with a manually bumped `major_minor` — patch-auto assumes additive changes.
 
 ## Commands
 
@@ -31,7 +31,7 @@ CI and release workflows must not create commits on any branch — `dev` → `ma
 
 - **Version tracking**: per-package git tags (`{name}-v{semver}`, e.g. `placeframe-api-client-v0.1.8`, `capture-tool-v0.2.0`), never committed state files.
 - **Change detection**: `git diff --quiet <last-tag> HEAD -- <path>`, never content hashing. `depends_on` cascades trigger dependents even when their own paths are unchanged.
-- **Version scheme**: first release `0.1.0`, then patch bumps from the tag ledger. Per-package numbers are independent within one release event — no lockstep.
+- **Version scheme**: the major.minor is config data, the patch is ledger data. Every package and app entry declares a required `major_minor` string (`"M.m"`); the planned version is the highest stable tag within that line plus one patch, or `.0` when the line has no tags — a first release is whatever the declared line says. A declared line below any existing ledger version fails loudly (never compute downward); major/minor bumps are reviewed `publish-config.json` edits in the shipping PR. Per-package numbers are independent within one release event — no lockstep.
 - **Unity `package.json` versions**: permanently `0.0.0-local` in the repo; patched ephemerally during `npm publish` and restored immediately — never committed.
 - **Python `pyproject.toml` versions**: permanently `0.0.0.dev0` in the repo (`0.0.0-local` is not valid PEP 440); patched ephemerally around `uv build` and restored immediately — never committed. The sdist/wheel carries the real version; the committed file never does.
 
@@ -41,7 +41,7 @@ The repo is the release unit: repos release independently; one release event pub
 
 ## Dev channel
 
-`publish-dev` publishes immutable prereleases of every path-diff-changed package; it creates no git tags, bumps no app versions, and opens no release. Versions are keyed by the CI run id and spelled per feed — `{base}-dev.{run_id}` where semver allows it (nuget, npm), `{base}.dev{run_id}` on PyPI — because no single string is both valid semver and valid PEP 440. The base is `next_version(last stable tag)`, so a package's dev versions share one base until the stable flow tags it. npm prereleases ride the single inert `dev` dist-tag so `latest` never moves. The job prints the exact published versions; that print is the consumption interface — consumers pin by hand, there is no discovery tooling.
+`publish-dev` publishes immutable prereleases of every path-diff-changed package; it creates no git tags, bumps no app versions, and opens no release. Versions are keyed by the CI run id and spelled per feed — `{base}-dev.{run_id}` where semver allows it (nuget, npm), `{base}.dev{run_id}` on PyPI — because no single string is both valid semver and valid PEP 440. The base is the next version derived from the declared `major_minor` and the tag ledger, so a package's dev versions share one base until the stable flow tags it. npm prereleases ride the single inert `dev` dist-tag so `latest` never moves. The job prints the exact published versions; that print is the consumption interface — consumers pin by hand, there is no discovery tooling.
 
 ## The Feed seam
 

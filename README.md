@@ -2,7 +2,7 @@
 
 Publication machinery for multi-feed package releases: a per-package git-tag ledger, path-diff change detection, ephemeral version patching, per-registry feed adapters (nuget, npm/UPM, PyPI), release orchestration, and an OCI mirror scan — all driven by a declarative, consumer-owned config.
 
-Every consuming repo keeps only a `publish-config.json` (package identities, paths, tag prefixes, registry mappings) and workflow steps that are thin `uvx` invocations. See [`AGENTS.md`](./AGENTS.md) for the invariants (CI-commit-free releases, tag-ledger versioning, ephemeral `0.0.0-local` / `0.0.0.dev0` version patching) and the command catalog.
+Every consuming repo keeps only a `publish-config.json` (package identities, paths, version lines, tag prefixes, registry mappings) and workflow steps that are thin `uvx` invocations. See [`AGENTS.md`](./AGENTS.md) for the invariants (CI-commit-free releases, tag-ledger versioning, ephemeral `0.0.0-local` / `0.0.0.dev0` version patching) and the command catalog.
 
 ## Requirements
 
@@ -28,13 +28,13 @@ jobs:
       - uses: astral-sh/setup-uv@v7
 
       - name: Publish
-        run: uvx --from release-devkit==0.1.8 publish-stable --config publish-config.json
+        run: uvx --from release-devkit==0.1.9 publish-stable --config publish-config.json
 ```
 
 The uvx invocation runs inside the caller's job, so the OIDC trusted-publishing identity stays the caller's own workflow — PyPI hard-blocks reusable-workflow publishers, which is why the call inlines in the caller's workflow rather than riding a reusable workflow. Direct uvx is the same shape anywhere else:
 
 ```bash
-uvx --from release-devkit==0.1.8 publish-stable --config build/publish-config.json
+uvx --from release-devkit==0.1.9 publish-stable --config build/publish-config.json
 ```
 
 Then author `build/publish-config.json`:
@@ -43,15 +43,18 @@ Then author `build/publish-config.json`:
 {
   "packages": [
     { "name": "my-api-client", "path": "generated/csharp/api-client/src/MyApiClient",
+      "major_minor": "0.1",
       "feeds": { "nuget": "MyApiClient", "npm": "org.example.myproject.apiclient" } },
-    { "name": "my-core", "path": "packages/unity/Core", "feeds": { "npm": "org.example.myproject" } },
-    { "name": "my-arfoundation", "path": "packages/unity/ARFoundation",
+    { "name": "my-core", "path": "packages/unity/Core", "major_minor": "1.0",
+      "feeds": { "npm": "org.example.myproject" } },
+    { "name": "my-arfoundation", "path": "packages/unity/ARFoundation", "major_minor": "1.0",
       "feeds": { "npm": "org.example.myproject.arfoundation" },
       "depends_on": ["my-core"],
       "dependency_pins": { "org.example.myproject": "my-core" } }
   ],
   "apps": [
-    { "name": "MyTool", "path": "apps/MyTool", "tag_prefix": "my-tool", "display_name": "My Tool" }
+    { "name": "MyTool", "path": "apps/MyTool", "major_minor": "1.0",
+      "tag_prefix": "my-tool", "display_name": "My Tool" }
   ],
   "compose_files": ["compose.bake.yml"],
   "ci_workflow": "my-ci.yml",
@@ -62,9 +65,9 @@ Then author `build/publish-config.json`:
 and invoke from CI:
 
 ```bash
-uvx --from release-devkit==0.1.8 publish-stable --config build/publish-config.json
-uvx --from release-devkit==0.1.8 publish-dev --config build/publish-config.json --run-id ${{ github.event.workflow_run.id }}
-uvx --from release-devkit==0.1.8 create-release --config build/publish-config.json
+uvx --from release-devkit==0.1.9 publish-stable --config build/publish-config.json
+uvx --from release-devkit==0.1.9 publish-dev --config build/publish-config.json --run-id ${{ github.event.workflow_run.id }}
+uvx --from release-devkit==0.1.9 create-release --config build/publish-config.json
 ```
 
 `publish-dev` is the dev-channel job: it publishes immutable `-dev.<run-id>` prereleases (`X.Y.Z.dev<run-id>` on PyPI) of every changed package on a green push — no git tags, npm `latest` untouched — and prints the exact versions to pin.
