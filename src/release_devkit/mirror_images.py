@@ -6,7 +6,7 @@ from typing import Annotated
 
 import typer
 from bashrun.bash import bash
-from docker_devkit.image_refs import collect_repo_references
+from docker_devkit.image_refs import declared_references
 from ci_devkit.ci_step import ci_step
 
 from .config import load_config
@@ -22,7 +22,7 @@ def main(config: Annotated[Path, typer.Option(help="Publish configuration JSON")
     mirror_prefix = publish_config.mirror_prefix
     targets = {
         occurrence.reference: occurrence.reference[len(mirror_prefix) + 1 :]
-        for occurrence in collect_repo_references(Path.cwd(), dockerfile_glob=None)
+        for occurrence in declared_references(Path.cwd())
         if occurrence.reference.startswith(f"{mirror_prefix}/")
     }
     with ci_step("Install crane"):

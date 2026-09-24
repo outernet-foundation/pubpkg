@@ -5,7 +5,7 @@ description = "Publication machinery: per-package tag ledger, path-diff change d
 requires-python = ">=3.13"
 dependencies = [
     "bashrun>=0.1.0",
-    "docker-devkit>=0.1.0",
+    "docker-devkit>=0.1.15",
     "ci-devkit>=0.1.0",
     "pydantic>=2.11.7",
     "pydantic-settings>=2.9.1",

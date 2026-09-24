@@ -11,6 +11,7 @@ import typer
 from bashrun.bash import bash, bash_output
 from pydantic_settings import BaseSettings
 from docker_devkit.context_sha import compute_service_shas
+from docker_devkit.documents import parse_bake
 from ci_devkit.ci_step import ci_step
 
 from .config import load_config
@@ -40,7 +41,7 @@ def main(config: Annotated[Path, typer.Option(help="Publish configuration JSON")
     with ci_step("Compute service SHAs"):
         service_shas: dict[str, str] = {}
         for compose_file in publish_config.compose_files:
-            service_shas.update(compute_service_shas(Path.cwd(), Path(compose_file)))
+            service_shas.update(compute_service_shas(Path.cwd(), parse_bake(Path(compose_file))))
         for var, sha in sorted(service_shas.items()):
             print(f"  {var}={sha}")
 
