@@ -62,13 +62,15 @@ Then author `build/publish-config.json`:
 }
 ```
 
-and invoke from CI:
+ and invoke from CI:
 
 ```bash
 uvx --from release-devkit==0.1.11 publish-stable --config build/publish-config.json
 uvx --from release-devkit==0.1.11 publish-dev --config build/publish-config.json --run-id ${{ github.event.workflow_run.id }}
 uvx --from release-devkit==0.1.11 create-release --config build/publish-config.json
 ```
+
+The list fields (`packages`, `apps`, `compose_files`) may be omitted when empty — an apps-only repo (no registry packages) declares no `packages` key at all.
 
 `publish-dev` is the dev-channel job: it publishes immutable `-dev.<run-id>` prereleases (`X.Y.Z.dev<run-id>` on PyPI) of every changed package on a green push — no git tags, npm `latest` untouched — and prints the exact versions to pin.
 
