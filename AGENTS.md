@@ -6,7 +6,7 @@ The publication machinery for outernet-foundation repos: the publish pipeline, t
 
 The consumer owns everything declarative: package identities, paths, tag prefixes, registry mappings, compose files, and the CI workflow name live in a consumer-authored `publish-config.json`; every command here reads that file. Per-repo copies of this machinery are refused, as are per-ecosystem splits — the seam is internal: one `Feed` adapter per registry over the shared ledger/diff/versioning core.
 
-The package is `release-devkit` (src-layout under `src/release_devkit/`; import `release_devkit`). Name history: `pubpkg` was unclaimable (PyPI's registrar rejects names merely similar to existing ones; nothing ever carried it), so `release-kit` was the first live PyPI identity — then the repo renamed to `release-devkit` (2026-09-21, member of the `-devkit` family): fresh tag ledger starting at `0.1.0`, with a terminal `release-kit` ≤0.1.0 deprecation release pointing here. Runtime dependencies: `bashrun` (all shell-outs), `docker-devkit` (`compute_service_shas`, `collect_repo_references`), `ci-devkit` (`ci_step`, runner setup, git-tag ledger), `pydantic`/`pydantic-settings` (config + CI env), `typer` (CLIs) — all from PyPI.
+The package is `release-devkit` (src-layout under `src/release_devkit/`; import `release_devkit`). Name history: `pubpkg` was unclaimable (PyPI's registrar rejects names merely similar to existing ones; nothing ever carried it), so `release-kit` was the first live PyPI identity — then the repo renamed to `release-devkit` (2026-09-21, member of the `-devkit` family): fresh tag ledger starting at `0.1.0`, with a terminal `release-kit` ≤0.1.0 deprecation release pointing here. Runtime dependencies: `bashrun` (all shell-outs), `docker-devkit` (`compute_service_shas`, `declared_references`), `ci-devkit` (`ci_step`, runner setup, git-tag ledger), `pydantic`/`pydantic-settings` (config + CI env), `typer` (CLIs) — all from PyPI.
 
 ## Self-publication
 
@@ -23,7 +23,7 @@ All are `uv run <name> --config <path>` from the consuming repo's root (config d
 | `create-release` | Assemble release notes (service SHAs from the configured compose files, package versions with registry links, app versions), package CI artifacts, and cut the CalVer-named (`YYYY.MM.N`, counting releases within the month) GitHub Release. Runs only when something published — consumer workflows gate the step on `publish-stable`'s `published` output. |
 | `ensure-release-pr` | Maintain the standing `dev` → `main` "Next release" gate PR. |
 | `fetch-ci-artifacts` | Locate the successful CI run for the release SHA (via the merge commit's second parent) and download its artifacts, pruning non-release ones per the config's skip rules. |
-| `mirror-images` | Populate the org-level ghcr mirror namespace with every mirror-prefixed image reference the repo scan finds, via `crane copy`. |
+| `mirror-images` | Populate the org-level ghcr mirror namespace with every mirror-prefixed image the bake declarations name (`declared_references` — validated `x-base-images` values only), via `crane copy`. |
 
 ## The CI-commit-free invariants
 
