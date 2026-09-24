@@ -29,13 +29,13 @@ def main(config: Annotated[Path, typer.Option(help="Publish configuration JSON")
     settings = Settings.model_validate({})
     publish_config = load_config(config)
 
-    today = datetime.now(UTC).strftime("%Y-%m-%d")
+    year_month = datetime.now(UTC).strftime("%Y.%m")
     existing = bash_output(
         f"gh release list --repo {settings.github_repository} --json tagName"
-        f" --jq '[.[].tagName] | map(select(startswith(\"{today}\"))) | length'"
+        f" --jq '[.[].tagName] | map(select(startswith(\"{year_month}\"))) | length'"
     ).strip()
     count = int(existing) if existing else 0
-    tag = f"{today}.{count + 1}" if count > 0 else today
+    tag = f"{year_month}.{count + 1}"
 
     with ci_step("Compute service SHAs"):
         service_shas: dict[str, str] = {}
