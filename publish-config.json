@@ -3,6 +3,7 @@
     {
       "name": "release-devkit",
       "path": ".",
+      "major_minor": "0.1",
       "feeds": { "pypi": "release-devkit" }
     }
   ],

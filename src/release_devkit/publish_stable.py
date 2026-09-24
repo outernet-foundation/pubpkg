@@ -82,15 +82,15 @@ def main(
     app_versions: dict[str, str] = {}
     with ci_step("Compute app versions"):
         for app_config in publish_config.apps:
-            last_version = ledger.latest_version(f"{app_config.tag_prefix}-v")
-            changed = ledger.has_changes_since(
-                f"{app_config.tag_prefix}-v{last_version}" if last_version else None, app_config.path
-            )
+            prefix = f"{app_config.tag_prefix}-v"
+            last_version = ledger.latest_version(prefix)
+            last_in_line = ledger.latest_version_in_line(prefix, app_config.major_minor)
+            changed = ledger.has_changes_since(f"{prefix}{last_version}" if last_version else None, app_config.path)
             # Apps depend on packages — bump if any package changed
             if any_package_published:
                 changed = True
             if changed:
-                new_version = next_version(last_version)
+                new_version = next_version(app_config.major_minor, last_in_line, last_version, app_config.name)
                 app_versions[app_config.name] = new_version
                 print(f"  {app_config.name}: {last_version or '(none)'} -> {new_version}")
             else:

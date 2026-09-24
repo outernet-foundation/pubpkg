@@ -12,10 +12,27 @@ from ci_devkit.git_tags import (
 STABLE_VERSION_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
 
 
+def parse_version(version: str) -> tuple[int, int, int]:
+    major, minor, patch = (int(part) for part in version.split("."))
+    return major, minor, patch
+
+
+def parse_major_minor(major_minor: str) -> tuple[int, int]:
+    major, minor = (int(part) for part in major_minor.split("."))
+    return major, minor
+
+
 class GitLedger:
     def latest_version(self, prefix: str) -> str | None:
         for version in list_tag_versions(prefix):
             if STABLE_VERSION_PATTERN.fullmatch(version):
+                return version
+        return None
+
+    def latest_version_in_line(self, prefix: str, major_minor: str) -> str | None:
+        line = parse_major_minor(major_minor)
+        for version in list_tag_versions(prefix):
+            if STABLE_VERSION_PATTERN.fullmatch(version) and parse_version(version)[:2] == line:
                 return version
         return None
 

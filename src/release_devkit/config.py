@@ -9,6 +9,7 @@ from .feeds import KNOWN_FEEDS
 class PackageConfig(BaseModel):
     name: str
     path: Path
+    major_minor: str = Field(pattern=r"^\d+\.\d+$")
     feeds: dict[str, str] = Field(default_factory=dict)
     depends_on: list[str] = Field(default_factory=list)
     dependency_pins: dict[str, str] = Field(default_factory=dict)
@@ -17,6 +18,7 @@ class PackageConfig(BaseModel):
 class AppConfig(BaseModel):
     name: str
     path: Path
+    major_minor: str = Field(pattern=r"^\d+\.\d+$")
     tag_prefix: str
     display_name: str
 

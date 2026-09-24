@@ -4,13 +4,15 @@ from typing import Protocol
 
 from .config import PackageConfig
 from .feeds import DEV_VERSION_FORMATS
+from .ledger import parse_major_minor, parse_version
 
-FIRST_VERSION = "0.1.0"
 UNCHANGED_FALLBACK_VERSION = "0.0.0"
 
 
 class TagLedger(Protocol):
     def latest_version(self, prefix: str) -> str | None: ...
+
+    def latest_version_in_line(self, prefix: str, major_minor: str) -> str | None: ...
 
     def has_changes_since(self, tag: str | None, path: Path) -> bool: ...
 
@@ -26,24 +28,36 @@ class PackagePlan:
 def compute_plan(packages: list[PackageConfig], ledger: TagLedger) -> dict[str, PackagePlan]:
     plans: dict[str, PackagePlan] = {}
     for package in packages:
-        last_version = ledger.latest_version(f"{package.name}-v")
-        changed = ledger.has_changes_since(f"{package.name}-v{last_version}" if last_version else None, package.path)
+        prefix = f"{package.name}-v"
+        last_version = ledger.latest_version(prefix)
+        last_in_line = ledger.latest_version_in_line(prefix, package.major_minor)
+        changed = ledger.has_changes_since(f"{prefix}{last_version}" if last_version else None, package.path)
         if any(plans[dependency].publish for dependency in package.depends_on):
             changed = True
         plans[package.name] = PackagePlan(
             name=package.name,
             publish=changed,
-            version=next_version(last_version) if changed else (last_version or UNCHANGED_FALLBACK_VERSION),
+            version=(
+                next_version(package.major_minor, last_in_line, last_version, package.name)
+                if changed
+                else (last_version or UNCHANGED_FALLBACK_VERSION)
+            ),
             last_version=last_version,
         )
     return plans
 
 
-def next_version(last_version: str | None) -> str:
-    if last_version is None:
-        return FIRST_VERSION
-    major, minor, patch = last_version.split(".")
-    return f"{major}.{minor}.{int(patch) + 1}"
+def next_version(major_minor: str, last_in_line: str | None, last_overall: str | None, subject: str) -> str:
+    line = parse_major_minor(major_minor)
+    if last_overall is not None and parse_version(last_overall)[:2] > line:
+        raise ValueError(
+            f"{subject}: declared major.minor {major_minor} is below ledger version {last_overall}; "
+            "bump major_minor in publish-config.json"
+        )
+    if last_in_line is None:
+        return f"{line[0]}.{line[1]}.0"
+    major, minor, patch = parse_version(last_in_line)
+    return f"{major}.{minor}.{patch + 1}"
 
 
 def resolved_dependency_versions(package: PackageConfig, plans: dict[str, PackagePlan]) -> dict[str, str]:
