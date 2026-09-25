@@ -3,8 +3,9 @@ from pathlib import Path
 from typing import Protocol
 
 from .config import PackageConfig
-from .registries import DEV_VERSION_FORMATS
 from .ledger import parse_major_minor, parse_version
+from .manifests import DependencyEdge
+from .registries import DEV_VERSION_FORMATS
 
 UNCHANGED_FALLBACK_VERSION = "0.0.0"
 
@@ -25,15 +26,21 @@ class PackagePlan:
     last_version: str | None
 
 
-def compute_plan(packages: list[PackageConfig], ledger: TagLedger) -> dict[str, PackagePlan]:
+@dataclass(frozen=True)
+class ResolvedDependency:
+    version: str
+    co_publishing: bool
+
+
+def compute_plan(
+    packages: list[PackageConfig], ledger: TagLedger, edges: dict[str, list[DependencyEdge]]
+) -> dict[str, PackagePlan]:
     plans: dict[str, PackagePlan] = {}
-    for package in packages:
+    for package in topological_order(packages, edges):
         prefix = f"{package.name}-v"
         last_version = ledger.latest_version(prefix)
         last_in_line = ledger.latest_version_in_line(prefix, package.major_minor)
         changed = ledger.has_changes_since(f"{prefix}{last_version}" if last_version else None, package.path)
-        if any(plans[dependency].publish for dependency in package.depends_on):
-            changed = True
         plans[package.name] = PackagePlan(
             name=package.name,
             publish=changed,
@@ -47,25 +54,53 @@ def compute_plan(packages: list[PackageConfig], ledger: TagLedger) -> dict[str, 
     return plans
 
 
+def resolve_dependency_versions(
+    package_edges: list[DependencyEdge], plans: dict[str, PackagePlan], publishing: set[str]
+) -> dict[str, ResolvedDependency]:
+    resolved: dict[str, ResolvedDependency] = {}
+    for edge in package_edges:
+        dependency_plan = plans[edge.dependency_package]
+        if edge.dependency_package in publishing:
+            resolved[edge.identity] = ResolvedDependency(version=dependency_plan.version, co_publishing=True)
+            continue
+        if dependency_plan.last_version is None:
+            raise ValueError(
+                f"dependency '{edge.dependency_package}' has never published; "
+                "publish it first or include it in this run"
+            )
+        resolved[edge.identity] = ResolvedDependency(version=dependency_plan.last_version, co_publishing=False)
+    return resolved
+
+
+def topological_order(packages: list[PackageConfig], edges: dict[str, list[DependencyEdge]]) -> list[PackageConfig]:
+    by_name = {package.name: package for package in packages}
+    dependencies = {
+        package.name: {edge.dependency_package for edge in edges.get(package.name, [])} for package in packages
+    }
+    ordered: list[PackageConfig] = []
+    placed: set[str] = set()
+    remaining = [package.name for package in packages]
+    while remaining:
+        ready = next((name for name in remaining if dependencies[name] <= placed), None)
+        if ready is None:
+            raise ValueError(f"cyclic dependency edge among packages: {sorted(remaining)}")
+        ordered.append(by_name[ready])
+        placed.add(ready)
+        remaining.remove(ready)
+    return ordered
+
+
 def next_version(major_minor: str, last_in_line: str | None, last_overall: str | None, subject: str) -> str:
     line = parse_major_minor(major_minor)
     if last_overall is not None and parse_version(last_overall)[:2] > line:
         raise ValueError(
             f"{subject}: declared major.minor {major_minor} is below ledger version {last_overall}; "
-            "bump major_minor in publish-config.json"
+            "bump major_minor in release-devkit.json"
         )
     if last_in_line is None:
         return f"{line[0]}.{line[1]}.0"
     major, minor, patch = parse_version(last_in_line)
     return f"{major}.{minor}.{patch + 1}"
-
-
-def resolved_dependency_versions(package: PackageConfig, plans: dict[str, PackagePlan]) -> dict[str, str]:
-    return {
-        dependency_name: plans[pinned_package].version
-        for dependency_name, pinned_package in package.dependency_pins.items()
-        if plans[pinned_package].publish
-    }
 
 
 def render_summary(plans: dict[str, PackagePlan]) -> str:

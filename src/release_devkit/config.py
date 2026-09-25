@@ -1,21 +1,23 @@
 from collections.abc import Sequence
 from pathlib import Path
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .registries import KNOWN_REGISTRIES
 
 
 class PackageConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     name: str
     path: Path
     major_minor: str = Field(pattern=r"^\d+\.\d+$")
     registries: dict[str, str] = Field(default_factory=dict)
-    depends_on: list[str] = Field(default_factory=list)
-    dependency_pins: dict[str, str] = Field(default_factory=dict)
 
 
 class AppConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     name: str
     path: Path
     major_minor: str = Field(pattern=r"^\d+\.\d+$")
@@ -24,6 +26,8 @@ class AppConfig(BaseModel):
 
 
 class PublishConfig(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     packages: list[PackageConfig] = Field(default_factory=list)
     apps: list[AppConfig] = Field(default_factory=list)
     compose_files: list[str] = Field(default_factory=list)
@@ -33,24 +37,12 @@ class PublishConfig(BaseModel):
     artifact_skip_suffixes: list[str] = Field(default_factory=lambda: ["-build-report"])
 
     @model_validator(mode="after")
-    def validate_dependency_graph(self) -> "PublishConfig":
+    def validate_unique_package_names(self) -> "PublishConfig":
         seen: set[str] = set()
         for package in self.packages:
-            for dependency in package.depends_on:
-                if dependency not in seen:
-                    if dependency in {p.name for p in self.packages}:
-                        message = f"package '{package.name}' depends on '{dependency}', which appears later in the list; packages must be ordered dependencies-first"
-                    else:
-                        message = f"package '{package.name}' depends on unknown package '{dependency}'"
-                    raise ValueError(message)
+            if package.name in seen:
+                raise ValueError(f"duplicate package name '{package.name}'")
             seen.add(package.name)
-
-        names = {package.name for package in self.packages}
-        for package in self.packages:
-            for pinned in package.dependency_pins.values():
-                if pinned not in names:
-                    raise ValueError(f"package '{package.name}' pins unknown package '{pinned}'")
-
         return self
 
     @model_validator(mode="after")

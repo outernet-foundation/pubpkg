@@ -9,10 +9,11 @@ from ci_devkit.ci_step import ci_step
 from ci_devkit.setup import configure_git, free_disk_space, install_dotnet, install_node
 
 from .config import load_config, select_packages
-from .registries import DEV_VERSION_FORMATS, NPM_DEV_DIST_TAG, PublishRequest, build_registries
 from .ledger import GitLedger
+from .manifests import resolve_edges
 from .outputs import append_line
-from .plan import compute_plan, render_dev_summary, resolved_dependency_versions
+from .plan import compute_plan, render_dev_summary, resolve_dependency_versions
+from .registries import DEV_VERSION_FORMATS, NPM_DEV_DIST_TAG, PublishRequest, build_registries
 
 app = typer.Typer(add_completion=False, pretty_exceptions_show_locals=False)
 
@@ -46,7 +47,14 @@ def main(
     ledger = GitLedger()
 
     with ci_step("Compute dev publish plan"):
-        plans = compute_plan(publish_config.packages, ledger)
+        edges = resolve_edges(publish_config.packages)
+        plans = compute_plan(publish_config.packages, ledger, edges)
+        publishing = {package.name for package in packages if plans[package.name].publish}
+        resolved_versions = {
+            package.name: resolve_dependency_versions(edges[package.name], plans, publishing)
+            for package in packages
+            if package.name in publishing
+        }
 
         summary = render_dev_summary(packages, plans, resolved_run_id)
         print(summary)
@@ -72,7 +80,6 @@ def main(
         plan = plans[package.name]
         if not plan.publish:
             continue
-        dependency_versions = resolved_dependency_versions(package, plans)
         for registry_name, identity in package.registries.items():
             dev_version = DEV_VERSION_FORMATS[registry_name](plan.version, resolved_run_id)
             with ci_step(f"Publish {registry_name} ({package.name}) {dev_version}"):
@@ -82,8 +89,12 @@ def main(
                         identity=identity,
                         version=dev_version,
                         dependency_versions={
-                            dependency_name: DEV_VERSION_FORMATS[registry_name](version, resolved_run_id)
-                            for dependency_name, version in dependency_versions.items()
+                            dependency_identity: (
+                                DEV_VERSION_FORMATS[registry_name](resolved.version, resolved_run_id)
+                                if resolved.co_publishing
+                                else resolved.version
+                            )
+                            for dependency_identity, resolved in resolved_versions[package.name].items()
                         },
                         dist_tag=NPM_DEV_DIST_TAG if registry_name == "npm" else None,
                     )

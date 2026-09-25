@@ -4,13 +4,17 @@ import pytest
 
 from release_devkit.config import PackageConfig
 from release_devkit.ledger import GitLedger, parse_major_minor, parse_version
+from release_devkit.manifests import DependencyEdge
 from release_devkit.plan import (
+    PackagePlan,
+    ResolvedDependency,
     TagLedger,
     compute_plan,
     next_version,
     render_dev_summary,
     render_summary,
-    resolved_dependency_versions,
+    resolve_dependency_versions,
+    topological_order,
 )
 
 
@@ -83,20 +87,30 @@ API_CLIENT = PackageConfig(
     registries={"nuget": "X", "npm": "N"},
 )
 CORE = PackageConfig(
-    name="placeframe-core", path=Path("packages/unity/Core"), major_minor="1.0", registries={"npm": "Y"}
+    name="placeframe-core",
+    path=Path("packages/unity/Core"),
+    major_minor="1.0",
+    registries={"npm": "Y"},
 )
 ARFOUNDATION = PackageConfig(
     name="placeframe-arfoundation",
     path=Path("packages/unity/ARFoundation"),
     major_minor="1.0",
     registries={"npm": "Z"},
-    depends_on=["placeframe-core"],
-    dependency_pins={"org.outernet.placeframe": "placeframe-core"},
 )
 COMMON = PackageConfig(
     name="placeframe-common", path=Path("packages/python/common"), major_minor="0.1", registries={"pypi": "P"}
 )
 PACKAGES = [API_CLIENT, CORE, ARFOUNDATION, COMMON]
+ARFOUNDATION_EDGE = DependencyEdge(
+    dependency_package="placeframe-core", registry="npm", identity="org.outernet.placeframe"
+)
+EDGES = {
+    "placeframe-api-client": [],
+    "placeframe-core": [],
+    "placeframe-arfoundation": [ARFOUNDATION_EDGE],
+    "placeframe-common": [],
+}
 
 
 def test_next_version_first_in_line_and_patch_bump():
@@ -128,7 +142,7 @@ def test_plan_first_publish_uses_declared_line():
         changed={"packages/generated/csharp/api-client": True, "packages/unity/Core": True},
     )
 
-    plans = compute_plan([API_CLIENT, CORE], ledger)
+    plans = compute_plan([API_CLIENT, CORE], ledger, {"placeframe-api-client": [], "placeframe-core": []})
 
     assert plans["placeframe-api-client"].publish is True
     assert plans["placeframe-api-client"].version == "0.1.0"
@@ -142,7 +156,7 @@ def test_plan_unchanged_package_carries_last_version():
         changed={"packages/generated/csharp/api-client": False},
     )
 
-    plans = compute_plan([API_CLIENT], ledger)
+    plans = compute_plan([API_CLIENT], ledger, {"placeframe-api-client": []})
 
     assert plans["placeframe-api-client"].publish is False
     assert plans["placeframe-api-client"].version == "0.1.7"
@@ -154,7 +168,7 @@ def test_plan_changed_package_patch_bumps_within_line():
         changed={"packages/generated/csharp/api-client": True},
     )
 
-    plans = compute_plan([API_CLIENT], ledger)
+    plans = compute_plan([API_CLIENT], ledger, {"placeframe-api-client": []})
 
     assert plans["placeframe-api-client"].publish is True
     assert plans["placeframe-api-client"].version == "0.1.8"
@@ -166,7 +180,7 @@ def test_plan_line_bump_publishes_first_version_of_new_line():
         changed={"packages/generated/csharp/api-client": True},
     )
 
-    plans = compute_plan([API_CLIENT.model_copy(update={"major_minor": "1.4"})], ledger)
+    plans = compute_plan([API_CLIENT.model_copy(update={"major_minor": "1.4"})], ledger, {"placeframe-api-client": []})
 
     assert plans["placeframe-api-client"].publish is True
     assert plans["placeframe-api-client"].version == "1.4.0"
@@ -179,10 +193,10 @@ def test_plan_guard_errors_when_line_is_below_ledger():
     )
 
     with pytest.raises(ValueError, match=r"placeframe-api-client: declared major\.minor 1\.4 is below ledger"):
-        compute_plan([API_CLIENT.model_copy(update={"major_minor": "1.4"})], ledger)
+        compute_plan([API_CLIENT.model_copy(update={"major_minor": "1.4"})], ledger, {"placeframe-api-client": []})
 
 
-def test_plan_dependency_cascade_publishes_dependent():
+def test_plan_no_cascade_unchanged_dependent_does_not_publish():
     ledger = FakeLedger(
         versions={"placeframe-core-v": ["1.0.5"]},
         changed={
@@ -191,36 +205,97 @@ def test_plan_dependency_cascade_publishes_dependent():
         },
     )
 
-    plans = compute_plan(PACKAGES, ledger)
+    plans = compute_plan(PACKAGES, ledger, EDGES)
 
     assert plans["placeframe-core"].publish is True
     assert plans["placeframe-core"].version == "1.0.6"
-    assert plans["placeframe-arfoundation"].publish is True
-    assert plans["placeframe-arfoundation"].version == "1.0.0"
+    assert plans["placeframe-arfoundation"].publish is False
+    assert plans["placeframe-arfoundation"].version == "0.0.0"
 
 
-def test_resolved_dependency_versions_only_when_dependency_publishes():
+def test_topological_order_places_dependencies_first_regardless_of_config_order():
+    ordered = topological_order([ARFOUNDATION, CORE], EDGES)
+
+    assert [package.name for package in ordered] == ["placeframe-core", "placeframe-arfoundation"]
+
+
+def test_topological_order_preserves_config_order_without_edges():
+    ordered = topological_order(PACKAGES, EDGES)
+
+    assert [package.name for package in ordered] == [
+        "placeframe-api-client",
+        "placeframe-core",
+        "placeframe-arfoundation",
+        "placeframe-common",
+    ]
+
+
+def test_topological_order_rejects_cycles():
+    cycle_edges = {
+        "placeframe-core": [DependencyEdge(dependency_package="placeframe-arfoundation", registry="npm", identity="a")],
+        "placeframe-arfoundation": [ARFOUNDATION_EDGE],
+    }
+
+    with pytest.raises(ValueError, match="cyclic dependency edge"):
+        topological_order([CORE, ARFOUNDATION], cycle_edges)
+
+
+def test_topological_order_rejects_self_edges():
+    self_edges = {
+        "placeframe-core": [DependencyEdge(dependency_package="placeframe-core", registry="npm", identity="Y")]
+    }
+
+    with pytest.raises(ValueError, match="cyclic dependency edge"):
+        topological_order([CORE], self_edges)
+
+
+def test_resolve_dependency_versions_co_publishing_rides_the_next_version():
     ledger = FakeLedger(
         versions={"placeframe-core-v": ["1.0.5"]},
-        changed={
-            "packages/unity/Core": False,
-            "packages/unity/ARFoundation": True,
-        },
+        changed={"packages/unity/Core": True, "packages/unity/ARFoundation": True},
     )
-    plans = compute_plan(PACKAGES, ledger)
+    plans = compute_plan(PACKAGES, ledger, EDGES)
 
-    assert plans["placeframe-arfoundation"].publish is True
-    assert resolved_dependency_versions(ARFOUNDATION, plans) == {}
+    resolved = resolve_dependency_versions(EDGES["placeframe-arfoundation"], plans, {"placeframe-core"})
 
-    cascade_ledger = FakeLedger(
+    assert resolved == {"org.outernet.placeframe": ResolvedDependency(version="1.0.6", co_publishing=True)}
+
+
+def test_resolve_dependency_versions_unchanged_sibling_rides_the_current_tag():
+    ledger = FakeLedger(
         versions={"placeframe-core-v": ["1.0.5"]},
-        changed={
-            "packages/unity/Core": True,
-            "packages/unity/ARFoundation": True,
-        },
+        changed={"packages/unity/Core": False, "packages/unity/ARFoundation": True},
     )
-    cascade_plans = compute_plan(PACKAGES, cascade_ledger)
-    assert resolved_dependency_versions(ARFOUNDATION, cascade_plans) == {"org.outernet.placeframe": "1.0.6"}
+    plans = compute_plan(PACKAGES, ledger, EDGES)
+
+    resolved = resolve_dependency_versions(EDGES["placeframe-arfoundation"], plans, {"placeframe-arfoundation"})
+
+    assert resolved == {"org.outernet.placeframe": ResolvedDependency(version="1.0.5", co_publishing=False)}
+
+
+def test_resolve_dependency_versions_never_published_sibling_is_loud():
+    ledger = FakeLedger(
+        versions={},
+        changed={"packages/unity/ARFoundation": True},
+    )
+    plans = compute_plan(PACKAGES, ledger, EDGES)
+
+    with pytest.raises(ValueError, match="'placeframe-core' has never published"):
+        resolve_dependency_versions(EDGES["placeframe-arfoundation"], plans, {"placeframe-arfoundation"})
+
+
+def test_resolve_dependency_versions_first_release_pair_co_publishes():
+    ledger = FakeLedger(
+        versions={},
+        changed={"packages/unity/Core": True, "packages/unity/ARFoundation": True},
+    )
+    plans = compute_plan(PACKAGES, ledger, EDGES)
+
+    resolved = resolve_dependency_versions(
+        EDGES["placeframe-arfoundation"], plans, {"placeframe-core", "placeframe-arfoundation"}
+    )
+
+    assert resolved == {"org.outernet.placeframe": ResolvedDependency(version="1.0.0", co_publishing=True)}
 
 
 def test_render_summary_lists_every_package():
@@ -232,7 +307,7 @@ def test_render_summary_lists_every_package():
             "packages/unity/ARFoundation": False,
         },
     )
-    plans = compute_plan(PACKAGES, ledger)
+    plans = compute_plan(PACKAGES, ledger, EDGES)
 
     summary = render_summary(plans)
 
@@ -251,7 +326,7 @@ def test_render_dev_summary_lists_per_registry_versions():
             "packages/python/common": True,
         },
     )
-    plans = compute_plan(PACKAGES, ledger)
+    plans = compute_plan(PACKAGES, ledger, EDGES)
 
     summary = render_dev_summary(PACKAGES, plans, "4242")
 
@@ -263,3 +338,8 @@ def test_render_dev_summary_lists_per_registry_versions():
 def test_fake_ledger_satisfies_protocol():
     ledger: TagLedger = FakeLedger(versions={}, changed={})
     assert ledger.latest_version("x-v") is None
+
+
+def test_package_plan_dataclass_shape():
+    plan = PackagePlan(name="pkg", publish=True, version="1.0.0", last_version="0.9.0")
+    assert plan.name == "pkg"

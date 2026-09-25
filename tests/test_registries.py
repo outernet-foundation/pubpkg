@@ -3,12 +3,14 @@ from pathlib import Path
 
 import pytest
 
-from release_devkit.registries import NpmRegistry, PublishRequest
+from release_devkit.registries import NpmRegistry, NuGetRegistry, PublishRequest
 from release_devkit.registries import (
     DEV_VERSION_FORMATS,
     KNOWN_REGISTRIES,
     ephemeral_manifest_patch,
     ephemeral_pyproject_patch,
+    nuget_injection_properties,
+    patch_project_dependencies,
     patch_project_version,
     pep440_dev_version,
     semver_dev_version,
@@ -25,6 +27,19 @@ PYPROJECT = (
     "\n"
     "[build-system]\n"
     'requires = ["hatchling"]\n'
+)
+
+PYPROJECT_WITH_SENTINELS = (
+    "[project]\n"
+    'name = "example"\n'
+    'version = "0.0.0.dev0"\n'
+    "dependencies = [\n"
+    '    "sibling==0.0.0+local",\n'
+    '    "pydantic>=2",\n'
+    "]\n"
+    "\n"
+    "[tool.uv.sources]\n"
+    "sibling = { workspace = true }\n"
 )
 
 
@@ -47,7 +62,11 @@ class CommandRecorder:
 def write_manifest(tmp_path: Path) -> Path:
     manifest_path = tmp_path / "package.json"
     manifest_path.write_text(
-        json.dumps({"name": "org.outernet.placeframe", "version": "0.0.0-local", "dependencies": {}}),
+        json.dumps({
+            "name": "org.outernet.placeframe",
+            "version": "0.0.0-local",
+            "dependencies": {"org.outernet.placeframe.apiclient": "0.0.0+local"},
+        }),
         encoding="utf-8",
     )
     return manifest_path
@@ -63,7 +82,15 @@ def test_patch_updates_version_and_pins_then_restores(tmp_path: Path):
 
     restored = json.loads(manifest_path.read_text(encoding="utf-8"))
     assert restored["version"] == "0.0.0-local"
-    assert restored["dependencies"] == {}
+    assert restored["dependencies"] == {"org.outernet.placeframe.apiclient": "0.0.0+local"}
+
+
+def test_patch_skips_dependency_keys_absent_from_the_manifest(tmp_path: Path):
+    manifest_path = write_manifest(tmp_path)
+
+    with ephemeral_manifest_patch(tmp_path, "0.2.1", {"some.pypi.sibling": "0.3.0"}):
+        patched = json.loads(manifest_path.read_text(encoding="utf-8"))
+        assert patched["dependencies"] == {"org.outernet.placeframe.apiclient": "0.0.0+local"}
 
 
 def test_patch_restores_on_error(tmp_path: Path):
@@ -93,7 +120,7 @@ def test_ephemeral_pyproject_patch_restores_the_original(tmp_path: Path) -> None
     manifest_path = tmp_path / "pyproject.toml"
     manifest_path.write_text(PYPROJECT, encoding="utf-8")
 
-    with ephemeral_pyproject_patch(tmp_path, "0.2.0"):
+    with ephemeral_pyproject_patch(tmp_path, "0.2.0", {}):
         assert 'version = "0.2.0"' in manifest_path.read_text(encoding="utf-8")
 
     assert manifest_path.read_text(encoding="utf-8") == PYPROJECT
@@ -103,10 +130,30 @@ def test_ephemeral_pyproject_patch_restores_on_error(tmp_path: Path) -> None:
     manifest_path = tmp_path / "pyproject.toml"
     manifest_path.write_text(PYPROJECT, encoding="utf-8")
 
-    with pytest.raises(RuntimeError), ephemeral_pyproject_patch(tmp_path, "0.2.0"):
+    with pytest.raises(RuntimeError), ephemeral_pyproject_patch(tmp_path, "0.2.0", {}):
         raise RuntimeError("publish exploded")
 
     assert manifest_path.read_text(encoding="utf-8") == PYPROJECT
+
+
+def test_ephemeral_pyproject_patch_rewrites_sentinel_specifiers(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "pyproject.toml"
+    manifest_path.write_text(PYPROJECT_WITH_SENTINELS, encoding="utf-8")
+
+    with ephemeral_pyproject_patch(tmp_path, "0.2.0", {"sibling": "1.0.4"}):
+        patched = manifest_path.read_text(encoding="utf-8")
+        assert 'version = "0.2.0"' in patched
+        assert '"sibling==1.0.4"' in patched
+        assert "0.0.0+local" not in patched
+        assert '"pydantic>=2"' in patched
+
+    assert manifest_path.read_text(encoding="utf-8") == PYPROJECT_WITH_SENTINELS
+
+
+def test_patch_project_dependencies_leaves_absent_entries_alone() -> None:
+    patched = patch_project_dependencies(PYPROJECT_WITH_SENTINELS, {"elsewhere": "9.9.9"})
+
+    assert patched == PYPROJECT_WITH_SENTINELS
 
 
 def test_dev_version_spellings_per_registry() -> None:
@@ -147,3 +194,68 @@ def test_npm_publish_without_dist_tag_leaves_latest_alone(tmp_path: Path, monkey
     )
 
     assert recorder.commands == ["npm publish --access public --provenance"]
+
+
+NUGET_CSPROJ = """<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <SiblingVersion>0.0.0+local</SiblingVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="External.Lib" Version="4.2.0" />
+    <PackageReference Include="Org.Sibling" Version="$(SiblingVersion)" />
+  </ItemGroup>
+</Project>
+"""
+
+
+def write_nuget_project(tmp_path: Path) -> None:
+    (tmp_path / "Consumer.csproj").write_text(NUGET_CSPROJ, encoding="utf-8")
+
+
+def test_nuget_publish_injects_property_flags_beside_the_version(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    write_nuget_project(tmp_path)
+    recorder = CommandRecorder()
+    monkeypatch.setattr("release_devkit.registries.bash", recorder)
+
+    NuGetRegistry("key").publish(
+        PublishRequest(
+            path=tmp_path,
+            identity="Org.Consumer",
+            version="1.0.6",
+            dependency_versions={"Org.Sibling": "1.0.6"},
+        )
+    )
+
+    assert recorder.commands[0] == "dotnet pack -c Release -p:Version=1.0.6 -p:SiblingVersion=1.0.6 -o ./nupkg"
+
+
+def test_nuget_publish_without_dependencies_omits_property_flags(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    write_nuget_project(tmp_path)
+    recorder = CommandRecorder()
+    monkeypatch.setattr("release_devkit.registries.bash", recorder)
+
+    NuGetRegistry("key").publish(
+        PublishRequest(path=tmp_path, identity="Org.Consumer", version="1.0.6", dependency_versions={})
+    )
+
+    assert recorder.commands[0] == "dotnet pack -c Release -p:Version=1.0.6 -o ./nupkg"
+
+
+def test_nuget_injection_properties_without_matching_reference_is_loud(tmp_path: Path) -> None:
+    write_nuget_project(tmp_path)
+
+    with pytest.raises(ValueError, match=r"no PackageReference found for \['Org.Missing'\]"):
+        nuget_injection_properties(tmp_path, {"Org.Missing": "1.0.0"})
+
+
+def test_nuget_injection_properties_literal_version_is_loud(tmp_path: Path) -> None:
+    csproj = NUGET_CSPROJ.replace('Version="$(SiblingVersion)"', 'Version="1.0.0"')
+    (tmp_path / "Consumer.csproj").write_text(csproj, encoding="utf-8")
+
+    with pytest.raises(ValueError, match=r"carries literal version '1.0.0'"):
+        nuget_injection_properties(tmp_path, {"Org.Sibling": "1.0.6"})

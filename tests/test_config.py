@@ -8,7 +8,7 @@ from release_devkit.config import PackageConfig, load_config, select_packages
 
 
 def write_config(tmp_path: Path, payload: dict[str, object]) -> Path:
-    config_path = tmp_path / "publish-config.json"
+    config_path = tmp_path / "release-devkit.json"
     config_path.write_text(json.dumps(payload), encoding="utf-8")
     return config_path
 
@@ -33,8 +33,6 @@ def base_payload() -> dict[str, object]:
                 "path": "packages/unity/Placeframe/Assets/Package/ARFoundation",
                 "major_minor": "1.0",
                 "registries": {"npm": "org.outernet.placeframe.arfoundation"},
-                "depends_on": ["placeframe-core"],
-                "dependency_pins": {"org.outernet.placeframe": "placeframe-core"},
             },
         ],
         "apps": [
@@ -51,53 +49,6 @@ def base_payload() -> dict[str, object]:
     }
 
 
-def payload_with_unknown_dependency() -> dict[str, object]:
-    return {
-        "packages": [
-            {
-                "name": "placeframe-api-client",
-                "path": "packages/generated/csharp/api-client",
-                "major_minor": "0.1",
-                "depends_on": ["nonexistent"],
-            },
-        ],
-        "ci_workflow": "placeframe-ci.yml",
-    }
-
-
-def payload_with_late_dependency() -> dict[str, object]:
-    return {
-        "packages": [
-            {
-                "name": "placeframe-arfoundation",
-                "path": "packages/unity/ARFoundation",
-                "major_minor": "1.0",
-                "depends_on": ["placeframe-core"],
-            },
-            {
-                "name": "placeframe-core",
-                "path": "packages/unity/Core",
-                "major_minor": "1.0",
-            },
-        ],
-        "ci_workflow": "placeframe-ci.yml",
-    }
-
-
-def payload_with_unknown_pin() -> dict[str, object]:
-    return {
-        "packages": [
-            {
-                "name": "placeframe-core",
-                "path": "packages/unity/Core",
-                "major_minor": "1.0",
-                "dependency_pins": {"org.example.foo": "nonexistent"},
-            },
-        ],
-        "ci_workflow": "placeframe-ci.yml",
-    }
-
-
 def test_load_config_parses_packages(tmp_path: Path):
     config = load_config(write_config(tmp_path, base_payload()))
 
@@ -106,9 +57,7 @@ def test_load_config_parses_packages(tmp_path: Path):
         "placeframe-core",
         "placeframe-arfoundation",
     ]
-    arfoundation = config.packages[2]
-    assert arfoundation.depends_on == ["placeframe-core"]
-    assert arfoundation.dependency_pins == {"org.outernet.placeframe": "placeframe-core"}
+    assert config.packages[2].registries == {"npm": "org.outernet.placeframe.arfoundation"}
     assert config.apps[0].tag_prefix == "capture-tool"
     assert config.artifact_dir == Path("/tmp/release-artifacts")
 
@@ -125,30 +74,60 @@ def test_load_config_defaults_empty_collections(tmp_path: Path):
     assert config.compose_files == []
 
 
-def test_load_config_ignores_leftover_mirror_prefix(tmp_path: Path):
+def test_load_config_rejects_the_old_feeds_key(tmp_path: Path):
+    payload = base_payload()
+    assert isinstance(payload["packages"], list)
+    payload["packages"][1]["feeds"] = payload["packages"][1]["registries"]
+    del payload["packages"][1]["registries"]
+
+    with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+        load_config(write_config(tmp_path, payload))
+
+
+def test_load_config_rejects_unknown_top_level_keys(tmp_path: Path):
     payload: dict[str, object] = {
         "ci_workflow": "my-ci.yml",
         "mirror_prefix": "ghcr.io/my-org/mirror",
     }
 
-    config = load_config(write_config(tmp_path, payload))
-
-    assert config.ci_workflow == "my-ci.yml"
-
-
-def test_load_config_rejects_unknown_dependency(tmp_path: Path):
-    with pytest.raises(ValidationError, match="unknown package 'nonexistent'"):
-        load_config(write_config(tmp_path, payload_with_unknown_dependency()))
+    with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+        load_config(write_config(tmp_path, payload))
 
 
-def test_load_config_rejects_dependencies_declared_later(tmp_path: Path):
-    with pytest.raises(ValidationError, match="appears later in the list"):
-        load_config(write_config(tmp_path, payload_with_late_dependency()))
+def test_load_config_rejects_unknown_registries(tmp_path: Path):
+    payload = base_payload()
+    assert isinstance(payload["packages"], list)
+    payload["packages"][0]["registries"] = {"cargo": "placeframe"}
+
+    with pytest.raises(ValidationError, match="unknown registries: \\['cargo'\\]"):
+        load_config(write_config(tmp_path, payload))
 
 
-def test_load_config_rejects_unknown_dependency_pin(tmp_path: Path):
-    with pytest.raises(ValidationError, match="pins unknown package 'nonexistent'"):
-        load_config(write_config(tmp_path, payload_with_unknown_pin()))
+def test_load_config_rejects_duplicate_package_names(tmp_path: Path):
+    payload = base_payload()
+    original = payload["packages"]
+    assert isinstance(original, list)
+    payload["packages"] = [*original, original[1]]
+    with pytest.raises(ValidationError, match="duplicate package name 'placeframe-core'"):
+        load_config(write_config(tmp_path, payload))
+
+
+def test_load_config_rejects_depends_on_entries(tmp_path: Path):
+    payload = base_payload()
+    assert isinstance(payload["packages"], list)
+    payload["packages"][2]["depends_on"] = ["placeframe-core"]
+
+    with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+        load_config(write_config(tmp_path, payload))
+
+
+def test_load_config_rejects_dependency_pins_entries(tmp_path: Path):
+    payload = base_payload()
+    assert isinstance(payload["packages"], list)
+    payload["packages"][2]["dependency_pins"] = {"org.outernet.placeframe": "placeframe-core"}
+
+    with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+        load_config(write_config(tmp_path, payload))
 
 
 def test_load_config_rejects_missing_major_minor(tmp_path: Path):

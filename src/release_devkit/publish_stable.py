@@ -9,10 +9,11 @@ from ci_devkit.ci_step import ci_step
 from ci_devkit.setup import configure_git, free_disk_space, install_dotnet, install_node
 
 from .config import load_config, select_packages
-from .registries import PublishRequest, build_registries
 from .ledger import GitLedger
+from .manifests import resolve_edges
 from .outputs import append_line
-from .plan import compute_plan, next_version, render_summary, resolved_dependency_versions
+from .plan import compute_plan, next_version, render_summary, resolve_dependency_versions
+from .registries import PublishRequest, build_registries
 
 app = typer.Typer(add_completion=False, pretty_exceptions_show_locals=False)
 
@@ -41,7 +42,14 @@ def main(
     handle_apps = (not only and not exclude) or with_apps
 
     with ci_step("Compute publish plan"):
-        plans = compute_plan(publish_config.packages, ledger)
+        edges = resolve_edges(publish_config.packages)
+        plans = compute_plan(publish_config.packages, ledger, edges)
+        publishing = {package.name for package in packages if plans[package.name].publish}
+        resolved_versions = {
+            package.name: resolve_dependency_versions(edges[package.name], plans, publishing)
+            for package in packages
+            if package.name in publishing
+        }
 
         summary = render_summary(plans)
         print(summary)
@@ -87,7 +95,9 @@ def main(
             plan = plans[package.name]
             if not plan.publish:
                 continue
-            dependency_versions = resolved_dependency_versions(package, plans)
+            dependency_versions = {
+                identity: resolved.version for identity, resolved in resolved_versions[package.name].items()
+            }
             for registry_name, identity in package.registries.items():
                 with ci_step(f"Publish {registry_name} ({package.name})"):
                     registries[registry_name].publish(

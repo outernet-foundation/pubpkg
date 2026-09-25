@@ -8,11 +8,29 @@ from subprocess import CalledProcessError
 from typing import Protocol
 
 from bashrun.bash import bash, bash_output
+from pydantic import BaseModel, ConfigDict, Field
+
+from .csproj import load_project_roots, read_package_references
 
 NUGET_SOURCE = "https://api.nuget.org/v3/index.json"
 PYPI_SIMPLE_INDEX = "https://pypi.org/simple/"
 PYPROJECT_VERSION_PATTERN = re.compile(r'^version\s*=\s*"[^"]*"')
 NPM_DEV_DIST_TAG = "dev"
+# Same-unit dependency sentinel: authored in manifests, injected with the event version at publish.
+SENTINEL_VERSION = "0.0.0+local"
+
+
+class NpmManifest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    version: str = ""
+    dependencies: dict[str, str] = Field(default_factory=dict)
+
+
+class PyprojectProjectTable(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    dependencies: list[str] = Field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -33,7 +51,13 @@ class NuGetRegistry:
         self.api_key = api_key
 
     def publish(self, request: PublishRequest) -> None:
-        bash(f"dotnet pack -c Release -p:Version={request.version} -o ./nupkg", cwd=request.path)
+        properties = nuget_injection_properties(request.path, request.dependency_versions)
+        command = f"dotnet pack -c Release -p:Version={request.version}"
+        if properties:
+            property_flags = " ".join(f"-p:{name}={version}" for name, version in properties.items())
+            command += f" {property_flags}"
+        command += " -o ./nupkg"
+        bash(command, cwd=request.path)
         bash(
             f"dotnet nuget push ./nupkg/*.nupkg --api-key {self.api_key} --source {NUGET_SOURCE} --skip-duplicate",
             cwd=request.path,
@@ -58,9 +82,7 @@ class NpmRegistry:
 
 class PyPIRegistry:
     def publish(self, request: PublishRequest) -> None:
-        if request.dependency_versions:
-            raise ValueError("pypi dependency pins are not supported")
-        with ephemeral_pyproject_patch(request.path, request.version):
+        with ephemeral_pyproject_patch(request.path, request.version, request.dependency_versions):
             bash("uv build --out-dir dist", cwd=request.path)
         bash(f"uv publish --check-url {PYPI_SIMPLE_INDEX}", cwd=request.path)
 
@@ -70,22 +92,24 @@ def ephemeral_manifest_patch(package_path: Path, version: str, dependency_versio
     manifest_path = package_path / "package.json"
     original = manifest_path.read_text(encoding="utf-8")
     try:
-        manifest = json.loads(original)
-        manifest["version"] = version
+        manifest = NpmManifest.model_validate(json.loads(original))
+        manifest.version = version
         for dependency_name, dependency_version in dependency_versions.items():
-            manifest["dependencies"][dependency_name] = dependency_version
-        manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+            if dependency_name in manifest.dependencies:
+                manifest.dependencies[dependency_name] = dependency_version
+        manifest_path.write_text(json.dumps(manifest.model_dump(), indent=2) + "\n", encoding="utf-8")
         yield
     finally:
         manifest_path.write_text(original, encoding="utf-8")
 
 
 @contextmanager
-def ephemeral_pyproject_patch(package_path: Path, version: str) -> Generator[None]:
+def ephemeral_pyproject_patch(package_path: Path, version: str, dependency_versions: dict[str, str]) -> Generator[None]:
     manifest_path = package_path / "pyproject.toml"
     original = manifest_path.read_text(encoding="utf-8")
     try:
-        manifest_path.write_text(patch_project_version(original, version), encoding="utf-8")
+        patched = patch_project_dependencies(original, dependency_versions)
+        manifest_path.write_text(patch_project_version(patched, version), encoding="utf-8")
         yield
     finally:
         manifest_path.write_text(original, encoding="utf-8")
@@ -102,6 +126,15 @@ def patch_project_version(original: str, version: str) -> str:
             lines[index] = f'version = "{version}"\n'
             return "".join(lines)
     raise ValueError("pyproject.toml carries no [project] version to patch")
+
+
+def patch_project_dependencies(original: str, dependency_versions: dict[str, str]) -> str:
+    patched = original
+    for dependency_name, dependency_version in dependency_versions.items():
+        sentinel_specifier = f"{dependency_name}=={SENTINEL_VERSION}"
+        if sentinel_specifier in patched:
+            patched = patched.replace(sentinel_specifier, f"{dependency_name}=={dependency_version}")
+    return patched
 
 
 KNOWN_REGISTRIES = frozenset({"nuget", "npm", "pypi"})
@@ -124,3 +157,23 @@ DEV_VERSION_FORMATS: dict[str, Callable[[str, str], str]] = {
 
 def build_registries(nuget_api_key: str) -> dict[str, Registry]:
     return {"nuget": NuGetRegistry(nuget_api_key), "npm": NpmRegistry(), "pypi": PyPIRegistry()}
+
+
+def nuget_injection_properties(package_path: Path, dependency_versions: dict[str, str]) -> dict[str, str]:
+    properties: dict[str, str] = {}
+    found: set[str] = set()
+    for root in load_project_roots(package_path):
+        for reference in read_package_references(root):
+            if reference.identity not in dependency_versions:
+                continue
+            if reference.property_name is None:
+                raise ValueError(
+                    f"package reference '{reference.identity}' carries literal version "
+                    f"'{reference.version}'; same-unit references must use a '$(Property)' version"
+                )
+            properties[reference.property_name] = dependency_versions[reference.identity]
+            found.add(reference.identity)
+    missing = set(dependency_versions) - found
+    if missing:
+        raise ValueError(f"no PackageReference found for {sorted(missing)} under '{package_path}'")
+    return properties
