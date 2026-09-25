@@ -17,7 +17,7 @@ from .registries import DEV_VERSION_FORMATS, NPM_DEV_DIST_TAG, PublishRequest, b
 
 app = typer.Typer(add_completion=False, pretty_exceptions_show_locals=False)
 
-DEFAULT_CONFIG_PATH = Path("build/publish-config.json")
+DEFAULT_CONFIG_PATH = Path("release-devkit.json")
 
 
 class Settings(BaseSettings):
