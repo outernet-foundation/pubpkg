@@ -3,10 +3,10 @@ from pathlib import Path
 
 import pytest
 
-from release_devkit.feeds import NpmFeed, PublishRequest
-from release_devkit.feeds import (
+from release_devkit.registries import NpmRegistry, PublishRequest
+from release_devkit.registries import (
     DEV_VERSION_FORMATS,
-    KNOWN_FEEDS,
+    KNOWN_REGISTRIES,
     ephemeral_manifest_patch,
     ephemeral_pyproject_patch,
     patch_project_version,
@@ -114,16 +114,16 @@ def test_dev_version_spellings_per_registry() -> None:
     assert pep440_dev_version("0.1.8", "123456") == "0.1.8.dev123456"
 
 
-def test_dev_version_formats_cover_every_known_feed() -> None:
-    assert set(DEV_VERSION_FORMATS) == KNOWN_FEEDS
+def test_dev_version_formats_cover_every_known_registry() -> None:
+    assert set(DEV_VERSION_FORMATS) == KNOWN_REGISTRIES
 
 
 def test_npm_publish_rides_the_dev_dist_tag(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     manifest_path = write_manifest(tmp_path)
     recorder = CommandRecorder()
-    monkeypatch.setattr("release_devkit.feeds.bash_output", recorder)
+    monkeypatch.setattr("release_devkit.registries.bash_output", recorder)
 
-    NpmFeed().publish(
+    NpmRegistry().publish(
         PublishRequest(
             path=tmp_path,
             identity="org.outernet.placeframe",
@@ -140,9 +140,9 @@ def test_npm_publish_rides_the_dev_dist_tag(tmp_path: Path, monkeypatch: pytest.
 def test_npm_publish_without_dist_tag_leaves_latest_alone(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     write_manifest(tmp_path)
     recorder = CommandRecorder()
-    monkeypatch.setattr("release_devkit.feeds.bash_output", recorder)
+    monkeypatch.setattr("release_devkit.registries.bash_output", recorder)
 
-    NpmFeed().publish(
+    NpmRegistry().publish(
         PublishRequest(path=tmp_path, identity="org.outernet.placeframe", version="0.2.1", dependency_versions={})
     )
 

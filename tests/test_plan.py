@@ -80,19 +80,21 @@ API_CLIENT = PackageConfig(
     name="placeframe-api-client",
     path=Path("packages/generated/csharp/api-client"),
     major_minor="0.1",
-    feeds={"nuget": "X", "npm": "N"},
+    registries={"nuget": "X", "npm": "N"},
 )
-CORE = PackageConfig(name="placeframe-core", path=Path("packages/unity/Core"), major_minor="1.0", feeds={"npm": "Y"})
+CORE = PackageConfig(
+    name="placeframe-core", path=Path("packages/unity/Core"), major_minor="1.0", registries={"npm": "Y"}
+)
 ARFOUNDATION = PackageConfig(
     name="placeframe-arfoundation",
     path=Path("packages/unity/ARFoundation"),
     major_minor="1.0",
-    feeds={"npm": "Z"},
+    registries={"npm": "Z"},
     depends_on=["placeframe-core"],
     dependency_pins={"org.outernet.placeframe": "placeframe-core"},
 )
 COMMON = PackageConfig(
-    name="placeframe-common", path=Path("packages/python/common"), major_minor="0.1", feeds={"pypi": "P"}
+    name="placeframe-common", path=Path("packages/python/common"), major_minor="0.1", registries={"pypi": "P"}
 )
 PACKAGES = [API_CLIENT, CORE, ARFOUNDATION, COMMON]
 
@@ -239,7 +241,7 @@ def test_render_summary_lists_every_package():
     assert "| placeframe-arfoundation | False | 0.0.0 |" in summary
 
 
-def test_render_dev_summary_lists_per_feed_versions():
+def test_render_dev_summary_lists_per_registry_versions():
     ledger = FakeLedger(
         versions={},
         changed={

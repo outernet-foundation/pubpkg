@@ -3,14 +3,14 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field, model_validator
 
-from .feeds import KNOWN_FEEDS
+from .registries import KNOWN_REGISTRIES
 
 
 class PackageConfig(BaseModel):
     name: str
     path: Path
     major_minor: str = Field(pattern=r"^\d+\.\d+$")
-    feeds: dict[str, str] = Field(default_factory=dict)
+    registries: dict[str, str] = Field(default_factory=dict)
     depends_on: list[str] = Field(default_factory=list)
     dependency_pins: dict[str, str] = Field(default_factory=dict)
 
@@ -54,11 +54,11 @@ class PublishConfig(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def validate_feed_names(self) -> "PublishConfig":
+    def validate_registry_names(self) -> "PublishConfig":
         for package in self.packages:
-            unknown_feeds = set(package.feeds) - KNOWN_FEEDS
-            if unknown_feeds:
-                raise ValueError(f"package '{package.name}' declares unknown feeds: {sorted(unknown_feeds)}")
+            unknown_registries = set(package.registries) - KNOWN_REGISTRIES
+            if unknown_registries:
+                raise ValueError(f"package '{package.name}' declares unknown registries: {sorted(unknown_registries)}")
         return self
 
 

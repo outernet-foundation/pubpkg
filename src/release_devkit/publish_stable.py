@@ -9,7 +9,7 @@ from ci_devkit.ci_step import ci_step
 from ci_devkit.setup import configure_git, free_disk_space, install_dotnet, install_node
 
 from .config import load_config, select_packages
-from .feeds import PublishRequest, build_feeds
+from .registries import PublishRequest, build_registries
 from .ledger import GitLedger
 from .outputs import append_line
 from .plan import compute_plan, next_version, render_summary, resolved_dependency_versions
@@ -82,15 +82,15 @@ def main(
             install_node("24", "https://registry.npmjs.org")
 
     if packages:
-        feeds = build_feeds(settings.nuget_api_key)
+        registries = build_registries(settings.nuget_api_key)
         for package in packages:
             plan = plans[package.name]
             if not plan.publish:
                 continue
             dependency_versions = resolved_dependency_versions(package, plans)
-            for feed_name, identity in package.feeds.items():
-                with ci_step(f"Publish {feed_name} ({package.name})"):
-                    feeds[feed_name].publish(
+            for registry_name, identity in package.registries.items():
+                with ci_step(f"Publish {registry_name} ({package.name})"):
+                    registries[registry_name].publish(
                         PublishRequest(
                             path=package.path,
                             identity=identity,

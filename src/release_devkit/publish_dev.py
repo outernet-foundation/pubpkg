@@ -9,7 +9,7 @@ from ci_devkit.ci_step import ci_step
 from ci_devkit.setup import configure_git, free_disk_space, install_dotnet, install_node
 
 from .config import load_config, select_packages
-from .feeds import DEV_VERSION_FORMATS, NPM_DEV_DIST_TAG, PublishRequest, build_feeds
+from .registries import DEV_VERSION_FORMATS, NPM_DEV_DIST_TAG, PublishRequest, build_registries
 from .ledger import GitLedger
 from .outputs import append_line
 from .plan import compute_plan, render_dev_summary, resolved_dependency_versions
@@ -66,33 +66,33 @@ def main(
         install_dotnet("8.0")
         install_node("24", "https://registry.npmjs.org")
 
-    feeds = build_feeds(settings.nuget_api_key)
+    registries = build_registries(settings.nuget_api_key)
     published: list[tuple[str, str, str]] = []
     for package in packages:
         plan = plans[package.name]
         if not plan.publish:
             continue
         dependency_versions = resolved_dependency_versions(package, plans)
-        for feed_name, identity in package.feeds.items():
-            dev_version = DEV_VERSION_FORMATS[feed_name](plan.version, resolved_run_id)
-            with ci_step(f"Publish {feed_name} ({package.name}) {dev_version}"):
-                feeds[feed_name].publish(
+        for registry_name, identity in package.registries.items():
+            dev_version = DEV_VERSION_FORMATS[registry_name](plan.version, resolved_run_id)
+            with ci_step(f"Publish {registry_name} ({package.name}) {dev_version}"):
+                registries[registry_name].publish(
                     PublishRequest(
                         path=package.path,
                         identity=identity,
                         version=dev_version,
                         dependency_versions={
-                            dependency_name: DEV_VERSION_FORMATS[feed_name](version, resolved_run_id)
+                            dependency_name: DEV_VERSION_FORMATS[registry_name](version, resolved_run_id)
                             for dependency_name, version in dependency_versions.items()
                         },
-                        dist_tag=NPM_DEV_DIST_TAG if feed_name == "npm" else None,
+                        dist_tag=NPM_DEV_DIST_TAG if registry_name == "npm" else None,
                     )
                 )
-            published.append((feed_name, identity, dev_version))
+            published.append((registry_name, identity, dev_version))
 
     recap = "\n".join([
         "### Published dev versions",
-        *(f"{feed_name}: {identity} @ {version}" for feed_name, identity, version in published),
+        *(f"{registry_name}: {identity} @ {version}" for registry_name, identity, version in published),
     ])
     print(recap)
     print("Consume these by exact version pin - there is no discovery tooling by design")

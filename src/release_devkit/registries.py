@@ -24,11 +24,11 @@ class PublishRequest:
     dist_tag: str | None = None
 
 
-class Feed(Protocol):
+class Registry(Protocol):
     def publish(self, request: PublishRequest) -> None: ...
 
 
-class NuGetFeed:
+class NuGetRegistry:
     def __init__(self, api_key: str) -> None:
         self.api_key = api_key
 
@@ -40,7 +40,7 @@ class NuGetFeed:
         )
 
 
-class NpmFeed:
+class NpmRegistry:
     def publish(self, request: PublishRequest) -> None:
         command = "npm publish --access public --provenance"
         if request.dist_tag:
@@ -56,7 +56,7 @@ class NpmFeed:
                     raise
 
 
-class PyPIFeed:
+class PyPIRegistry:
     def publish(self, request: PublishRequest) -> None:
         if request.dependency_versions:
             raise ValueError("pypi dependency pins are not supported")
@@ -104,7 +104,7 @@ def patch_project_version(original: str, version: str) -> str:
     raise ValueError("pyproject.toml carries no [project] version to patch")
 
 
-KNOWN_FEEDS = frozenset({"nuget", "npm", "pypi"})
+KNOWN_REGISTRIES = frozenset({"nuget", "npm", "pypi"})
 
 
 def semver_dev_version(base_version: str, run_id: str) -> str:
@@ -122,5 +122,5 @@ DEV_VERSION_FORMATS: dict[str, Callable[[str, str], str]] = {
 }
 
 
-def build_feeds(nuget_api_key: str) -> dict[str, Feed]:
-    return {"nuget": NuGetFeed(nuget_api_key), "npm": NpmFeed(), "pypi": PyPIFeed()}
+def build_registries(nuget_api_key: str) -> dict[str, Registry]:
+    return {"nuget": NuGetRegistry(nuget_api_key), "npm": NpmRegistry(), "pypi": PyPIRegistry()}

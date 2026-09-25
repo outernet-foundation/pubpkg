@@ -1,7 +1,7 @@
 [project]
 name = "release-devkit"
 version = "0.0.0.dev0"
-description = "Publication machinery: per-package tag ledger, path-diff change detection, ephemeral version patching, and per-registry feed adapters (nuget, npm/UPM) driven by a declarative consumer-owned config"
+description = "Publication machinery: per-package tag ledger, path-diff change detection, ephemeral version patching, and registry adapters (nuget, npm/UPM, PyPI) driven by a declarative consumer-owned config"
 requires-python = ">=3.13"
 dependencies = [
     "bashrun>=0.1.0",

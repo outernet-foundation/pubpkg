@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Protocol
 
 from .config import PackageConfig
-from .feeds import DEV_VERSION_FORMATS
+from .registries import DEV_VERSION_FORMATS
 from .ledger import parse_major_minor, parse_version
 
 UNCHANGED_FALLBACK_VERSION = "0.0.0"
@@ -90,8 +90,8 @@ def render_dev_summary(packages: list[PackageConfig], plans: dict[str, PackagePl
             lines.append(f"| {plan.name} | False | - |")
             continue
         versions = ", ".join(
-            f"{feed_name}: {identity} @ {DEV_VERSION_FORMATS[feed_name](plan.version, run_id)}"
-            for feed_name, identity in package.feeds.items()
+            f"{registry_name}: {identity} @ {DEV_VERSION_FORMATS[registry_name](plan.version, run_id)}"
+            for registry_name, identity in package.registries.items()
         )
         lines.append(f"| {plan.name} | True | {versions} |")
     return "\n".join(lines)

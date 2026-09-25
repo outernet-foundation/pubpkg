@@ -84,7 +84,7 @@ def main(config: Annotated[Path, typer.Option(help="Publish configuration JSON")
         owner, repository = settings.github_repository.split("/", maxsplit=1)
         ghcr_url = f"https://github.com/orgs/{owner}/packages?repo_name={repository}"
 
-        feed_urls: dict[str, Callable[[str, str], str]] = {
+        registry_urls: dict[str, Callable[[str, str], str]] = {
             "nuget": lambda identity, version: f"https://www.nuget.org/packages/{identity}/{version}",
             "npm": lambda identity, version: f"https://www.npmjs.com/package/{identity}/v/{version}",
             "pypi": lambda identity, version: f"https://pypi.org/project/{identity}/{version}",
@@ -110,14 +110,14 @@ def main(config: Annotated[Path, typer.Option(help="Publish configuration JSON")
         for package in publish_config.packages:
             version = ledger.latest_version(f"{package.name}-v") or UNCHANGED_FALLBACK_VERSION
             links: list[str] = []
-            for feed_name, identity in package.feeds.items():
-                url_builder = feed_urls.get(feed_name)
+            for registry_name, identity in package.registries.items():
+                url_builder = registry_urls.get(registry_name)
                 if url_builder is None:
-                    links.append(feed_name)
+                    links.append(registry_name)
                 elif version != UNCHANGED_FALLBACK_VERSION:
-                    links.append(f"[{feed_name}]({url_builder(identity, version)})")
+                    links.append(f"[{registry_name}]({url_builder(identity, version)})")
                 else:
-                    links.append(feed_name)
+                    links.append(registry_name)
             lines.append(f"| {package.name} | {version} | {', '.join(links)} |")
 
         for app_config in publish_config.apps:
