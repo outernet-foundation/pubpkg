@@ -1,13 +1,13 @@
 # release-devkit
 
-Publication machinery for multi-feed package releases: a per-package git-tag ledger, path-diff change detection, ephemeral version patching, per-registry feed adapters (nuget, npm/UPM, PyPI), release orchestration, and an OCI mirror scan — all driven by a declarative, consumer-owned config.
+Publication machinery for multi-feed package releases: a per-package git-tag ledger, path-diff change detection, ephemeral version patching, per-registry feed adapters (nuget, npm/UPM, PyPI), and release orchestration — all driven by a declarative, consumer-owned config.
 
 Every consuming repo keeps only a `publish-config.json` (package identities, paths, version lines, tag prefixes, registry mappings) and workflow steps that are thin `uvx` invocations. See [`AGENTS.md`](./AGENTS.md) for the invariants (CI-commit-free releases, tag-ledger versioning, ephemeral `0.0.0-local` / `0.0.0.dev0` version patching) and the command catalog.
 
 ## Requirements
 
 - Python 3.13+ and [uv](https://docs.astral.sh/uv/)
-- At runtime: `git`, `gh`, `dotnet` (nuget publish), `node`/`npm` (npm publish), `uv` (PyPI publish via trusted publishing), `crane` (installed by `mirror-images`)
+- At runtime: `git`, `gh`, `dotnet` (nuget publish), `node`/`npm` (npm publish), `uv` (PyPI publish via trusted publishing)
 
 ## Consuming from another repo
 
@@ -57,8 +57,7 @@ Then author `build/publish-config.json`:
       "tag_prefix": "my-tool", "display_name": "My Tool" }
   ],
   "compose_files": ["compose.bake.yml"],
-  "ci_workflow": "my-ci.yml",
-  "mirror_prefix": "ghcr.io/my-org/mirror"
+  "ci_workflow": "my-ci.yml"
 }
 ```
 
