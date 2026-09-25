@@ -28,7 +28,6 @@ class PublishConfig(BaseModel):
     apps: list[AppConfig] = Field(default_factory=list)
     compose_files: list[str] = Field(default_factory=list)
     ci_workflow: str
-    mirror_prefix: str
     artifact_dir: Path = Path("/tmp/release-artifacts")
     artifact_skip_prefixes: list[str] = Field(default_factory=lambda: ["env-lock-", "versions"])
     artifact_skip_suffixes: list[str] = Field(default_factory=lambda: ["-build-report"])

@@ -48,7 +48,6 @@ def base_payload() -> dict[str, object]:
         ],
         "compose_files": ["compose.bake.yml"],
         "ci_workflow": "placeframe-ci.yml",
-        "mirror_prefix": "ghcr.io/outernet-foundation/mirror",
     }
 
 
@@ -63,7 +62,6 @@ def payload_with_unknown_dependency() -> dict[str, object]:
             },
         ],
         "ci_workflow": "placeframe-ci.yml",
-        "mirror_prefix": "ghcr.io/outernet-foundation/mirror",
     }
 
 
@@ -83,7 +81,6 @@ def payload_with_late_dependency() -> dict[str, object]:
             },
         ],
         "ci_workflow": "placeframe-ci.yml",
-        "mirror_prefix": "ghcr.io/outernet-foundation/mirror",
     }
 
 
@@ -98,7 +95,6 @@ def payload_with_unknown_pin() -> dict[str, object]:
             },
         ],
         "ci_workflow": "placeframe-ci.yml",
-        "mirror_prefix": "ghcr.io/outernet-foundation/mirror",
     }
 
 
@@ -114,14 +110,12 @@ def test_load_config_parses_packages(tmp_path: Path):
     assert arfoundation.depends_on == ["placeframe-core"]
     assert arfoundation.dependency_pins == {"org.outernet.placeframe": "placeframe-core"}
     assert config.apps[0].tag_prefix == "capture-tool"
-    assert config.mirror_prefix == "ghcr.io/outernet-foundation/mirror"
     assert config.artifact_dir == Path("/tmp/release-artifacts")
 
 
 def test_load_config_defaults_empty_collections(tmp_path: Path):
     payload: dict[str, object] = {
         "ci_workflow": "my-ci.yml",
-        "mirror_prefix": "ghcr.io/my-org/mirror",
     }
 
     config = load_config(write_config(tmp_path, payload))
@@ -129,6 +123,17 @@ def test_load_config_defaults_empty_collections(tmp_path: Path):
     assert config.packages == []
     assert config.apps == []
     assert config.compose_files == []
+
+
+def test_load_config_ignores_leftover_mirror_prefix(tmp_path: Path):
+    payload: dict[str, object] = {
+        "ci_workflow": "my-ci.yml",
+        "mirror_prefix": "ghcr.io/my-org/mirror",
+    }
+
+    config = load_config(write_config(tmp_path, payload))
+
+    assert config.ci_workflow == "my-ci.yml"
 
 
 def test_load_config_rejects_unknown_dependency(tmp_path: Path):
