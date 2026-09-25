@@ -10,8 +10,6 @@ from typing import Annotated
 import typer
 from bashrun.bash import bash, bash_output
 from pydantic_settings import BaseSettings
-from docker_devkit.context_sha import compute_service_shas
-from docker_devkit.documents import parse_bake
 from ci_devkit.ci_step import ci_step
 
 from .config import load_config
@@ -37,13 +35,6 @@ def main(config: Annotated[Path, typer.Option(help="Publish configuration JSON")
     ).strip()
     count = int(existing) if existing else 0
     tag = f"{year_month}.{count + 1}"
-
-    with ci_step("Compute service SHAs"):
-        service_shas: dict[str, str] = {}
-        for compose_file in publish_config.compose_files:
-            service_shas.update(compute_service_shas(Path.cwd(), parse_bake(Path(compose_file))))
-        for var, sha in sorted(service_shas.items()):
-            print(f"  {var}={sha}")
 
     with ci_step("Package artifacts"):
         assets: list[Path] = []
@@ -81,9 +72,6 @@ def main(config: Annotated[Path, typer.Option(help="Publish configuration JSON")
             print("  No build artifacts to attach")
 
     with ci_step("Create GitHub Release"):
-        owner, repository = settings.github_repository.split("/", maxsplit=1)
-        ghcr_url = f"https://github.com/orgs/{owner}/packages?repo_name={repository}"
-
         registry_urls: dict[str, Callable[[str, str], str]] = {
             "nuget": lambda identity, version: f"https://www.nuget.org/packages/{identity}/{version}",
             "npm": lambda identity, version: f"https://www.npmjs.com/package/{identity}/v/{version}",
@@ -92,19 +80,6 @@ def main(config: Annotated[Path, typer.Option(help="Publish configuration JSON")
 
         ledger = GitLedger()
         lines: list[str] = []
-
-        if service_shas:
-            lines.extend([
-                "## Docker images",
-                "",
-                f"Images on [GHCR]({ghcr_url}), per-service tags:",
-                "",
-                "| Env var | Tag |",
-                "|---|---|",
-            ])
-            for var, sha in sorted(service_shas.items()):
-                lines.append(f"| `{var}` | `{sha}` |")
-            lines.append("")
 
         lines.extend(["## Packages", "", "| Package | Version | Registry |", "|---|---|---|"])
         for package in publish_config.packages:

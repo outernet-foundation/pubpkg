@@ -44,7 +44,6 @@ def base_payload() -> dict[str, object]:
                 "display_name": "Capture Tool",
             },
         ],
-        "compose_files": ["compose.bake.yml"],
         "ci_workflow": "placeframe-ci.yml",
     }
 
@@ -71,7 +70,6 @@ def test_load_config_defaults_empty_collections(tmp_path: Path):
 
     assert config.packages == []
     assert config.apps == []
-    assert config.compose_files == []
 
 
 def test_load_config_rejects_the_old_feeds_key(tmp_path: Path):
